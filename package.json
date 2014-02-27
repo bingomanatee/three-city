@@ -1,0 +1,33 @@
+{
+  "name": "three-city",
+  "version": "0.0.0",
+  "description": "",
+  "main": "city.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/bingomanatee/three-city.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/bingomanatee/three-city/issues"
+  },
+  "homepage": "https://github.com/bingomanatee/three-city",
+  "devDependencies": {
+    "grunt": "~0.4.2",
+    "grunt-contrib-concat": "~0.3.0",
+    "grunt-umd": "~1.6.2",
+    "tap": "~0.4.8",
+    "grunt-contrib-copy": "~0.5.0"
+  },
+  "dependencies": {
+    "three": "~0.58.10",
+    "underscore": "~1.6.0",
+    "node-easel": "~0.1.2",
+    "fools": "0.0.5-a",
+    "canvas": "~1.1.3"
+  }
+}

@@ -95,8 +95,23 @@ City.prototype = {
             var sphere = new THREE.Mesh(new THREE.SphereGeometry(GRID_SIZE / 2), this._display.mat('white').obj());
             this._display.add(new O3.RenderObject(sphere));
             this.ground_tiles();
+
+            this.tower();
         }
         return this._display;
+    },
+
+    tower: function(){
+       var loader = new THREE.JSONLoader();
+
+
+        loader.load('/3d/tower.json', function(obj, mats){
+            console.log('tower: ', obj, 'mats:', mats);
+            var mesh = new THREE.Mesh(obj,  new THREE.MeshFaceMaterial(mats));
+            mesh.scale.set(GRID_SIZE, GRID_SIZE, GRID_SIZE);
+            this.display().add(new O3.RenderObject(mesh, {name: 'tower'}));
+        }.bind(this), '/img/');
+
     },
 
     ground_tiles: function () {

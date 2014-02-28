@@ -15,10 +15,10 @@ function City() {
     this.x = 0;
     this.z = 0;
 
-    this.extent = 120;
+    this.extent = 20;
 
-    this.x_period = 12;
-    this.z_period = 9;
+    this.x_period = 8;
+    this.z_period = 6;
 
     this.display_name = 'city';
 }
@@ -69,6 +69,7 @@ O3.mat('road.', {
     color: new THREE.Color(1, 1, 1)
 });
 
+O3.mat('ground', {type: 'MeshLambertMaterial', color: O3.util.rgb(0.05, 0.5, 0.1)});
 O3.mat('white', {type: 'phong', color: new THREE.Color(1, 1, .5)});
 var GRID_SIZE = 20;
 var tile_geo = new THREE.PlaneGeometry(GRID_SIZE, GRID_SIZE, 4, 4);
@@ -86,10 +87,10 @@ City.prototype = {
             var origin = new THREE.Vector3(0, 0, 0);
             var camera = this._display.camera();
             var cam = this._display.add(new O3.RenderObject(null, {name: 'camera', update: function () {
-               // cam.obj().lookAt(origin);
+                // cam.obj().lookAt(origin);
                 this.obj().translateY(0.5);
             }})).at(0, GRID_SIZE * 2, GRID_SIZE * 4);
-            cam.obj().rotateX(Math.PI /- 5);
+            cam.obj().rotateX(Math.PI / -5);
 
             cam.obj().add(camera);
             var sphere = new THREE.Mesh(new THREE.SphereGeometry(GRID_SIZE / 2), this._display.mat('white').obj());
@@ -97,19 +98,34 @@ City.prototype = {
             this.ground_tiles();
 
             this.tower();
+
+            this.ground_plane();
         }
         return this._display;
     },
 
-    tower: function(){
-       var loader = new THREE.JSONLoader();
+    ground_plane: function () {
 
+        var g = new THREE.PlaneGeometry(GRID_SIZE * this.extent * 2, GRID_SIZE * this.extent * 2, this.extent * 2, this.extent * 2);
+        var mesh = new THREE.Mesh(g, this.display().mat('ground').obj());
+        mesh.rotateX(Math.PI / -2);
+        var ro = new O3.RenderObject(null, {name: 'ground plane'});
+        ro.obj().add(mesh);
+        ro.obj().translateY(GRID_SIZE/-10);
+        this.display().add(ro);
 
-        loader.load('/3d/tower.json', function(obj, mats){
+    },
+
+    tower: function () {
+        var loader = new THREE.JSONLoader();
+
+        var self = this;
+        loader.load('/3d/tower.json', function (obj, mats) {
             console.log('tower: ', obj, 'mats:', mats);
-            var mesh = new THREE.Mesh(obj,  new THREE.MeshFaceMaterial(mats));
-            mesh.scale.set(GRID_SIZE, GRID_SIZE, GRID_SIZE);
+            var mesh = new THREE.Mesh(obj, new THREE.MeshFaceMaterial(mats));
+            mesh.scale.set(GRID_SIZE / 2, GRID_SIZE / 2, GRID_SIZE / 2);
             this.display().add(new O3.RenderObject(mesh, {name: 'tower'}));
+            self._tower = mesh;
         }.bind(this), '/img/');
 
     },
@@ -133,11 +149,8 @@ City.prototype = {
         var grid_data = this.grid_data();
         //  console.log('data: ', grid_data);
         _.each(grid_data, function (data, i) {
-            if (data.type == '.') {
-                return;
-            }
-
             var root;
+
             if (tiles[i]) {
                 root = tiles.pop();
                 root.obj().children = [];
@@ -147,32 +160,63 @@ City.prototype = {
                 ground.add(root);
             }
 
-            var mat = this.display().mat('road' + data.type).obj();
-            var tile = new THREE.Mesh(   tile_geo,  mat );
-            tile.rotateX(Math.PI / -2);
-            root.obj().add(tile);
-            if (!mat.map) switch (data.type) {
+            switch (data.type) {
                 case '+':
-                    mat.map = road_cross_texture;
+                    var mat = this.display().mat('road' + data.type).obj();
+
+                    var tile = new THREE.Mesh(tile_geo, mat);
+                    tile.rotateX(Math.PI / -2);
+                    root.obj().add(tile);
+                    if (!mat.map) {
+                        mat.map = road_cross_texture;
+                    }
                     break;
 
                 case '-':
-                    mat.map = road_x_texture;
+                    var mat = this.display().mat('road' + data.type).obj();
+                    var tile = new THREE.Mesh(tile_geo, mat);
+                    tile.rotateX(Math.PI / -2);
+                    root.obj().add(tile);
+                    if (!mat.map) {
+                        mat.map = road_x_texture;
+                    }
                     break;
 
                 case '|':
-                    mat.map = road_z_texture;
+                    var mat = this.display().mat('road' + data.type).obj();
+                    var tile = new THREE.Mesh(tile_geo, mat);
+                    tile.rotateX(Math.PI / -2);
+                    root.obj().add(tile);
+                    if (!mat.map) {
+                        mat.map = road_z_texture;
+                    }
                     break;
 
-                default:
-                    mat.map = road_texture;
+                case '.':
+                    if (this._tower) {
+                        root.obj().add(this._tower.clone());
+                    } else {
+                        root.add_tower = true;
+                        root.update = function () {
+                            if (this._tower) {
+                                var tower = this._tower.clone();
+                                tower.translateY(Math.floor(Math.random() * 5) * GRID_SIZE);
+                                root.obj().add(tower);
+                                root.update = _.identity;
+                            }
+                        }.bind(this);
+
+                    }
+
+                    break;
+
             }
 
             root.at(data.x * GRID_SIZE, 0, data.z * GRID_SIZE);
 
         }, this);
 
-        _.each(tiles, function(tile){
+        _.each(tiles, function (tile) {
             ground.remove(tile);
         })
     },
@@ -214,7 +258,19 @@ City.prototype = {
                 } else if (is_y) {
                     memo.push(_.extend({type: '-'}, iterator));
                 } else {
-                    memo.push(_.extend({type: '.'}, iterator));
+
+                    var x1 = iterator.x + 1;
+                    var x0 = iterator.x - 1;
+                    var z1 = iterator.z + 1;
+                    var z0 = iterator.z - 1;
+
+                    if (_.contains(x_axis, x1) || _.contains(x_axis, x0) || _.contains(z_axis, z1) || _.contains(z_axis, z0)) {
+
+                        memo.push(_.extend({type: '.'}, iterator));
+                    } else {
+                        memo.push(_.extend({type: '*'}, iterator));
+                    }
+
                 }
                 //if (out.place('x', iterator) == 'last') memo.push('*');
                 return memo;

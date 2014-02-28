@@ -15,55 +15,63 @@ function City() {
     this.x = 0;
     this.z = 0;
 
-    this.extent = 10;
+    this.extent = 120;
 
-    this.x_period = 5;
-    this.z_period = 3;
+    this.x_period = 12;
+    this.z_period = 9;
 
     this.display_name = 'city';
 }
 
-/*var road_cross_texture = THREE.ImageUtils.loadTexture('img/roads.png');
-road_cross_texture.repeat.set(0.5, 0.5);*/
+var road_cross_texture = THREE.ImageUtils.loadTexture('/img/roads.png', undefined, function (e) {
+    _.extend(road_cross_texture, e);
+    road_cross_texture.loaded = true;
+    console.log('loaded cross texture');
+}, function (err) {
+    console.log('texture load error: ', err);
+});
+road_cross_texture.repeat.set(0.5, 0.5);
+road_cross_texture.offset.set(0, 0.5);
 O3.mat('road+', {
-    type: 'MeshLambertMaterial',
+    type: 'MeshPhongMaterial',
     //   map: road_cross_texture,
     side: THREE.DoubleSide,
     color: new THREE.Color(1, 1, 1)
 });
 
-/*var road_x_texture = THREE.ImageUtils.loadTexture('img/roads.png');
+var road_x_texture = THREE.ImageUtils.loadTexture('img/roads.png');
 road_x_texture.repeat.set(0.5, 0.5);
-road_x_texture.offset.x = 0.5;*/
+road_x_texture.offset.set(0.5, 0.5);
 O3.mat('road-', {
-    //  type: 'MeshLambertMaterial',
+    type: 'MeshPhongMaterial',
     // map: road_x_texture,
     side: THREE.DoubleSide,
     color: new THREE.Color(1, 1, 1)
 });
 
-/*var road_z_texture = THREE.ImageUtils.loadTexture('img/roads.png');
-road_x_texture.repeat.set(0.5, 0.5);
-road_x_texture.offset.y = 0.5;*/
+var road_z_texture = THREE.ImageUtils.loadTexture('img/roads.png');
+road_z_texture.repeat.set(0.5, 0.5);
+road_z_texture.offset.set(0, 0);
+
 O3.mat('road|', {
-    //  type: 'MeshLambertMaterial',
+    type: 'MeshPhongMaterial',
     //  map: road_z_texture,
     side: THREE.DoubleSide,
     color: new THREE.Color(1, 1, 1)
 });
 
-/*var road_texture = THREE.ImageUtils.loadTexture('img/roads.png');
+var road_texture = THREE.ImageUtils.loadTexture('img/roads.png');
 road_texture.repeat.set(0.5, 0.5);
-road_texture.offset.set(0.5, 0.5);*/
+road_texture.offset.set(0.5, 0);
 O3.mat('road.', {
-    // type: 'MeshLambertMaterial',
+    type: 'MeshPhongMaterial',
     //   map: road_texture,
     color: new THREE.Color(1, 1, 1)
 });
 
 O3.mat('white', {type: 'phong', color: new THREE.Color(1, 1, .5)});
 var GRID_SIZE = 20;
-var tile_geo = new THREE.PlaneGeometry(GRID_SIZE, GRID_SIZE);
+var tile_geo = new THREE.PlaneGeometry(GRID_SIZE, GRID_SIZE, 4, 4);
 
 City.prototype = {
 
@@ -75,13 +83,17 @@ City.prototype = {
             sun.rgb(1, 1, 1);
             this._display.add(sun);
             sun.obj().rotateX(Math.PI / 2);
+            var origin = new THREE.Vector3(0, 0, 0);
+            var camera = this._display.camera();
             var cam = this._display.add(new O3.RenderObject(null, {name: 'camera', update: function () {
-                //  this.obj().rotateY(Math.PI/100);
-            }})).at(0, GRID_SIZE * 2, GRID_SIZE * 10);
-            cam.obj().rotateX(Math.PI / -30);
+               // cam.obj().lookAt(origin);
+                this.obj().translateY(0.5);
+            }})).at(0, GRID_SIZE * 2, GRID_SIZE * 4);
+            cam.obj().rotateX(Math.PI /- 5);
 
-            cam.obj().add(this._display.camera());
-            this._display.add(new O3.RenderObject(new THREE.Mesh(new THREE.SphereGeometry(GRID_SIZE / 2), this._display.mat('white').obj())));
+            cam.obj().add(camera);
+            var sphere = new THREE.Mesh(new THREE.SphereGeometry(GRID_SIZE / 2), this._display.mat('white').obj());
+            this._display.add(new O3.RenderObject(sphere));
             this.ground_tiles();
         }
         return this._display;
@@ -91,7 +103,7 @@ City.prototype = {
         var self = this;
         if (!this._ground) {
             this._ground = new O3.RenderObject(null, {name: 'ground', update: function () {
-             //   self._update_ground_tiles(self._ground);
+                //   self._update_ground_tiles(self._ground);
 
             }});
             this.display().add(this._ground);
@@ -101,30 +113,53 @@ City.prototype = {
     },
 
     _update_ground_tiles: function (ground) {
-        var tiles = ground.children;
+        var tiles = ground.children.slice();
 
         var grid_data = this.grid_data();
-      //  console.log('data: ', grid_data);
+        //  console.log('data: ', grid_data);
         _.each(grid_data, function (data, i) {
-
-            var tile = new THREE.Mesh(
-                tile_geo,
-                this.display().mat('road' + data.type).obj()
-            );
-            if (!tiles[i]) {
-
-                tile.rotateX(Math.PI /2);
-                tiles[i] = new O3.RenderObject(tile, function () {
-               //     this.obj().rotateX(Math.PI / 100);
-                });
-                ground.add(tiles[i]);
-            } else {
-              // tiles[i].obj(tile);
+            if (data.type == '.') {
+                return;
             }
-            tiles[i].at(data.x * GRID_SIZE, 0, data.z * GRID_SIZE);
-            tiles[i].obj().geometry.computeTangents();
+
+            var root;
+            if (tiles[i]) {
+                root = tiles.pop();
+                root.obj().children = [];
+            } else {
+                root = new O3.RenderObject(null, function () {
+                });
+                ground.add(root);
+            }
+
+            var mat = this.display().mat('road' + data.type).obj();
+            var tile = new THREE.Mesh(   tile_geo,  mat );
+            tile.rotateX(Math.PI / -2);
+            root.obj().add(tile);
+            if (!mat.map) switch (data.type) {
+                case '+':
+                    mat.map = road_cross_texture;
+                    break;
+
+                case '-':
+                    mat.map = road_x_texture;
+                    break;
+
+                case '|':
+                    mat.map = road_z_texture;
+                    break;
+
+                default:
+                    mat.map = road_texture;
+            }
+
+            root.at(data.x * GRID_SIZE, 0, data.z * GRID_SIZE);
 
         }, this);
+
+        _.each(tiles, function(tile){
+            ground.remove(tile);
+        })
     },
 
     range: function () {

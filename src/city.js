@@ -12,71 +12,89 @@ function City() {
 }
 O3.mat('road-', {
     type: 'MeshPhongMaterial',
-    // map: road_x_texture,
     side: THREE.DoubleSide,
+    receiveShadow: true,
     color: new THREE.Color(1, 1, 1)
 });
 O3.mat('road+', {
     type: 'MeshPhongMaterial',
-    //   map: road_cross_texture,
     side: THREE.DoubleSide,
+    receiveShadow: true,
     color: new THREE.Color(1, 1, 1)
 });
 O3.mat('road|', {
     type: 'MeshPhongMaterial',
-    //  map: road_z_texture,
     side: THREE.DoubleSide,
+    receiveShadow: true,
     color: new THREE.Color(1, 1, 1)
 });
 O3.mat('road.', {
     type: 'MeshPhongMaterial',
-    //   map: road_texture,
+    receiveShadow: true,
     color: new THREE.Color(1, 1, 1)
 });
-O3.mat('ground', {type: 'MeshLambertMaterial', color: O3.util.rgb(0.05, 0.5, 0.1)});
-O3.mat('white', {type: 'phong', color: new THREE.Color(1, 1, .5)});
+O3.mat('ground', {type: 'MeshLambertMaterial', receiveShadow: true, color: O3.util.rgb(0.05, 0.5, 0.1)});
+O3.mat('white', {type: 'phong', receiveShadow: true, color: new THREE.Color(0.8,0.8,0.8)});
+O3.mat('light', {type: 'MeshBasicMaterial', color: new THREE.Color(1, 1, 0.8)});
 
-var GRID_SIZE = 20;
-var tile_geo = new THREE.PlaneGeometry(GRID_SIZE, GRID_SIZE, 4, 4);
+City.GRID_SIZE = 50;
+
+var cube_geo = new THREE.CubeGeometry(City.GRID_SIZE, City.GRID_SIZE,City.GRID_SIZE,1,1,1);
+cube_geo.castShadow = true;
 
 City.prototype = {
 
     display: function () {
         if (!this._display) {
             this._display = O3.display(this.display_name);
-            var sun = new O3.RenderObject('point light').at(-GRID_SIZE * 2, GRID_SIZE * 3, 0);
-            sun.obj().intensity = 4;
-            sun.rgb(1, 1, 1);
+
+            var D = 64 * this.extent;
+            var light = _.extend(new THREE.DirectionalLight(), {
+                shadowCameraLeft: -D, shadowCameraRight: D, shadowCameraTop: -D, shadowCameraBottom: D,
+                castShadow: true, shadowCameraVisible: true, shadowMapWidth: Math.pow(2, 12), shadowMapHeight: Math.pow(2, 12)});
+            light.scale.set(2,2,2);
+            var sun_light = new O3.RenderObject(light, function(){
+
+            });
+
+            var sun = new O3.RenderObject(null).at(0, City.GRID_SIZE * 4, 0);
+/*
+            var sun_spot = new THREE.Mesh(new THREE.PlaneGeometry(City.GRID_SIZE/4, City.GRID_SIZE/4), this._display.mat('light').obj());
+            sun_spot.rotateX(Math.PI/-2);
+            sun_spot.castShadow = sun_spot.receiveShadow = false;
+            var ro = new O3.RenderObject(sun_spot);
+           // sun.add(ro);*/
+            sun.add(sun_light);
+            sun.at(City.GRID_SIZE * -4, City.GRID_SIZE * 16, City.GRID_SIZE * -6);
             this._display.add(sun);
-            sun.obj().rotateX(Math.PI / 2);
-            var origin = new THREE.Vector3(0, 0, 0);
+
             var camera = this._display.camera();
             var cam = this._display.add(new O3.RenderObject(null, {name: 'camera', update: function () {
-                // cam.obj().lookAt(origin);
                 this.obj().translateY(0.5);
-            }})).at(0, GRID_SIZE * 2, GRID_SIZE * 4);
-            cam.obj().rotateX(Math.PI / -5);
+            }})).at(City.GRID_SIZE * -4, City.GRID_SIZE * 2, City.GRID_SIZE * 6);
 
             cam.obj().add(camera);
-            var sphere = new THREE.Mesh(new THREE.SphereGeometry(GRID_SIZE / 2), this._display.mat('white').obj());
+        cam.obj().rotateX(Math.PI/-4);
+            var sphere = new THREE.Mesh(new THREE.SphereGeometry(City.GRID_SIZE / 2), this._display.mat('white').obj());
             this._display.add(new O3.RenderObject(sphere));
             this.ground_tiles();
 
             this.tower();
 
-            this.ground_plane();
+            this._display.renderer().shadowMapEnabled = true;
+
+            // this.ground_plane();
         }
         return this._display;
     },
 
     ground_plane: function () {
-
-        var g = new THREE.PlaneGeometry(GRID_SIZE * this.extent * 2, GRID_SIZE * this.extent * 2, this.extent * 2, this.extent * 2);
+        var g = new THREE.PlaneGeometry(City.GRID_SIZE * this.extent * 2, City.GRID_SIZE * this.extent * 2, this.extent * 2, this.extent * 2);
         var mesh = new THREE.Mesh(g, this.display().mat('ground').obj());
         mesh.rotateX(Math.PI / -2);
         var ro = new O3.RenderObject(null, {name: 'ground plane'});
         ro.obj().add(mesh);
-        ro.obj().translateY(GRID_SIZE / -10);
+        ro.obj().translateY(City.GRID_SIZE / -10);
         this.display().add(ro);
 
     },
@@ -86,10 +104,10 @@ City.prototype = {
 
         var self = this;
         loader.load('/3d/tower.json', function (obj, mats) {
-            console.log('tower: ', obj, 'mats:', mats);
+            //console.log('tower: ', obj, 'mats:', mats);
             var mesh = new THREE.Mesh(obj, new THREE.MeshFaceMaterial(mats));
-            mesh.scale.set(GRID_SIZE / 2, GRID_SIZE / 2, GRID_SIZE / 2);
-            this.display().add(new O3.RenderObject(mesh, {name: 'tower'}));
+            mesh.scale.set(City.GRID_SIZE / 2, City.GRID_SIZE / 2, City.GRID_SIZE / 2);
+           // this.display().add(new O3.RenderObject(mesh, {name: 'tower'}));
             self._tower = mesh;
         }.bind(this), '/img/');
 
@@ -109,86 +127,105 @@ City.prototype = {
     },
 
     _update_ground_tiles: function (ground) {
-        var road_tiles = this.display().find({type: 'roads'});
-
-        var blocks = this.display().find({type: 'blocks'});
 
         var grid_data = this.grid_data();
+        var display = this.display();
 
-        var road_diff = this._road_diff(road_tiles, grid_data.roads);
+        _.each(grid_data, function (blocks) {
+            var old_blocks = display.find({type: blocks.type});
+            Utils.block_diff(old_blocks, blocks.blocks);
 
-        //  console.log('data: ', grid_data);
-        _.each(grid_data.roads, function (data, i) {
-            var root;
+            var absent_blocks = _.where(old_blocks, {state: 'absent'});
+            var new_blocks = _.where(blocks.blocks, {state: 'new'});
 
-            if (tiles[i]) {
-                root = tiles.pop();
-                root.obj().children = [];
-            } else {
-                root = new O3.RenderObject(null, function () {
-                });
-                ground.add(root);
-            }
+            _.each(new_blocks, function (new_block) {
+                var root = this.make_block_mesh(new_block, blocks.type);
+                if (root) {
+                    display.add(root);
+                }
+            }, this);
 
-            switch (data.type) {
-                case '+':
-                    var mat = this.display().mat('road' + data.type).obj();
-
-                    var tile = new THREE.Mesh(tile_geo, mat);
-                    tile.rotateX(Math.PI / -2);
-                    root.obj().add(tile);
-                    if (!mat.map) {
-                        mat.map = TEXTURES.road_cross_texture;
-                    }
-                    break;
-
-                case '-':
-                    var mat = this.display().mat('road' + data.type).obj();
-                    var tile = new THREE.Mesh(tile_geo, mat);
-                    tile.rotateX(Math.PI / -2);
-                    root.obj().add(tile);
-                    if (!mat.map) {
-                        mat.map = TEXTURES.road_x_texture;
-                    }
-                    break;
-
-                case '|':
-                    var mat = this.display().mat('road' + data.type).obj();
-                    var tile = new THREE.Mesh(tile_geo, mat);
-                    tile.rotateX(Math.PI / -2);
-                    root.obj().add(tile);
-                    if (!mat.map) {
-                        mat.map = TEXTURES.road_z_texture;
-                    }
-                    break;
-
-                case '.':
-                    if (this._tower) {
-                        root.obj().add(this._tower.clone());
-                    } else {
-                        root.add_tower = true;
-                        root.update = function () {
-                            if (this._tower) {
-                                var tower = this._tower.clone();
-                                tower.translateY(Math.floor(Math.random() * 5) * GRID_SIZE);
-                                root.obj().add(tower);
-                                root.update = _.identity;
-                            }
-                        }.bind(this);
-
-                    }
-
-                    break;
-
-            }
-
-            root.at(data.x * GRID_SIZE, 0, data.z * GRID_SIZE);
+            _.each(absent_blocks, function (block) {
+                display.remove(block);
+            }, this);
 
         }, this);
+    },
 
-        _.each(tiles, function (tile) {
-            ground.remove(tile);
-        })
+    make_block_mesh: function (block, type) {
+
+        var root, geometries, mesh, mat;
+
+        switch (type) {
+            case '+':
+            case '-':
+            case '|':
+                mat = this.display().mat('road' + type);
+                if (!mat.faceMat){
+                    mat.faceMat = new THREE.MeshFaceMaterial([mat.obj()]);
+                }
+
+                mesh = new THREE.Mesh(block.geometry(), mat.faceMat);
+                mesh.rotateX(Math.PI / -2);
+                mesh.receiveShadow = mesh.castShadow  = true;
+
+                if (!mat.obj().map) {
+                    mat.obj().map = TEXTURES.roads[type];
+                }
+
+                var ro = new O3.RenderObject(mesh, {type: type, update_on_animate: false});
+                root = new O3.RenderObject();
+                root.add(ro);
+
+                var x_offset = (block.width() - 1);
+                var z_offset = (block.depth() - 1);
+                var x = block.min_x + x_offset/2;
+                var z = block.min_z + z_offset/2;
+
+                root.at(x * City.GRID_SIZE, 0, z * City.GRID_SIZE);
+                break;
+
+            case '.':
+
+                var self = this;
+
+                function tower_mesh() {
+                    geometries = _.map(block.tiles, function (data) {
+                        var geo = self._tower.geometry.clone();
+                        geo.position.set(data.x * City.GRID_SIZE, 0, data.z * City.GRID_SIZE);
+                        return geo;
+                    });
+                    return new THREE.Mesh(Util.merge_geometries(geometries), self._tower.material);
+                }
+
+                if (this._tower) {
+                    // drawing single block of towers
+
+                 //   root = new O3.RenderObject(tower_mesh(), {type: type})
+                } else {
+                    // drawing towers when tower becomes available.
+              /*      root = new O3.RenderObject(null, function () {
+
+                        if (this._tower) {
+                            root.obj(tower_mesh());
+                        }
+                        root.update_on_animate = false;
+                        root.update = _.identity;
+                    }.bind(this));*/
+                }
+
+                 root = new O3.RenderObject();
+                _.each(block.tiles, function(tile){
+                    var cube = new THREE.Mesh(cube_geo, this.display().mat('white').obj());
+                    cube.receiveShadow = true;
+                    cube.castShadow = true;
+                    root.add(new O3.RenderObject(cube).at(City.GRID_SIZE * tile.x, 0, City.GRID_SIZE * tile.z));
+                }, this);
+                break;
+
+        }
+        return root;
+
     },
 
     range: function () {
@@ -208,58 +245,7 @@ City.prototype = {
     },
 
     grid_data: function () {
-        var self = this;
-
-        var range = this.range();
-        var x_axis = this.axis('x');
-        var z_axis = this.axis('z');
-        //   console.log('x_axis: %s, ', x_axis.join(','));
-        //  console.log('z_axis: %s, ', z_axis.join(','));
-
-        return Fools.pipe(
-            Fools.loop(
-                function produce_tiles(iterator, memo) {
-                    var is_x = (_.contains(x_axis, iterator.x));
-                    var is_y = (_.contains(z_axis, iterator.z));
-
-                    if (is_x && is_y) {
-                        memo.push(_.extend({type: '+'}, iterator));
-                    } else if (is_x) {
-                        memo.push(_.extend({type: '|'}, iterator));
-                    } else if (is_y) {
-                        memo.push(_.extend({type: '-'}, iterator));
-                    } else {
-
-                        var x1 = iterator.x + 1;
-                        var x0 = iterator.x - 1;
-                        var z1 = iterator.z + 1;
-                        var z0 = iterator.z - 1;
-
-                        if (_.contains(x_axis, x1) || _.contains(x_axis, x0) || _.contains(z_axis, z1) || _.contains(z_axis, z0)) {
-
-                            memo.push(_.extend({type: '.'}, iterator));
-                        } else {
-                            memo.push(_.extend({type: '*'}, iterator));
-                        }
-
-                    }
-                    //if (out.place('x', iterator) == 'last') memo.push('*');
-                    return memo;
-                }
-            ).dim('x').min(range.x.min).max(range.x.max).dim('z').min(range.z.min).max(range.z.max),
-            function group_tiles_by_type(data) {
-                return _.groupBy(data, 'type');
-            },
-            function group_block_tiles(grouped_data) {
-
-                var tiles = grouped_data['.'];
-                delete grouped_data['.'];
-                return {
-                    roads: _.flatten(_.values(grouped_data)),
-                    blocks: Block.make_blocks(tiles)
-                };
-            })
-            ([]);
+        return Utils.grid_data(this);
     },
 
     axis: function (dim) {
@@ -282,6 +268,5 @@ City.prototype = {
         }
 
     }
-
 
 };

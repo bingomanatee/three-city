@@ -1,36 +1,41 @@
-var TEXTURES = {};
+var TEXTURES = {roads: {}};
 
 _.each(
-    {
-        road_cross_texture: {
-            name: '/img/roads.png',
-            repeat: [0.5, 0.5],
-            offset: [0, 0.5]
+    [
+        {
+            type: '+',
+            name: '/img/road+.png',
+            repeat: [1,1],
+            offset: [0.0]
         },
-        road_x_texture: {
-            name: 'img/roads.png',
-            repeat: [0.5, 0.5],
-            offset: [0.5, 0.5]
+        {
+            type: '-',
+            name: 'img/road-.png',
+            repeat: [1,1],
+            offset: [0.0]
         },
-        road_z_texture: {
-            name: 'img/roads.png',
-            repeat: [0.5, 0.5],
-            offset: [0, 0]
+        {
+            type: '|',
+            name: 'img/roadl.png',
+            repeat: [1,1],
+            offset: [0.0]
         },
-        road_texture: {
+        {
+            type: '.',
             name: 'img/roads.png',
-            repeat: [0.5, 0.5],
-            offset: [0.5, 0]
+            repeat: [1,1],
+            offset: [0.0]
         }
-    },
+    ],
 
-    function (data, key) {
-        if (typeof Image == 'undefined'){
-            TEXTURES[key] = null;
+    function (data) {
+        if (typeof Image == 'undefined') {
+            TEXTURES.roads[data.type] = null;
         } else {
             var texture = THREE.ImageUtils.loadTexture(data.name);
-            road_texture.repeat.set(data.repeat[0], data.repeat[1]);
-            road_texture.offset.set(data.offset[0], data.repeat[1]);
-            TEXTURES[key] = texture;
+            //texture.repeat.set(data.repeat[0], data.repeat[1]);
+            //texture.offset.set(data.offset[0], data.offset[1]);
+            texture.repeatS = texture.repatT = THREE.RepeatWrapping;
+            TEXTURES.roads[data.type] = texture;
         }
     });

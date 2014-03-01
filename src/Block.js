@@ -67,6 +67,24 @@ Block.prototype = {
         this.max_x = Math.max(this.max_x, block.max_x);
         this.max_z = Math.max(this.max_z, block.max_z);
         block.tiles = [];
+    },
+
+    width: function(){
+       return this.max_x - this.min_x + 1;
+    },
+
+    depth: function(){
+        return this.max_z - this.min_z + 1;
+    },
+
+    geometry: function(){
+        var geo = new THREE.PlaneGeometry(this.width() * City.GRID_SIZE, this.depth() * City.GRID_SIZE, this.width(), this.depth());
+        _.each(_.flatten(geo.faceVertexUvs), function(uv){
+        }, this);
+        _.each(geo.faces, function(f){
+            f.materialIndex = 0;
+        });
+        return geo;
     }
 };
 

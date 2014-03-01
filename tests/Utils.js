@@ -19,8 +19,8 @@ require('tap').test('city', function (test) {
         require('fs').writeFileSync(__dirname + '/data/old_tiles.json', JSON.stringify({tiles: _.sortBy(old_tiles, ['x', 'z'])}));
         require('fs').writeFileSync(__dirname + '/data/new_tiles.json', JSON.stringify({tiles: _.sortBy(new_tiles, ['x', 'z'])}));
 
-        console.log('new_tiles: %s', util.inspect(_.sortBy(new_tiles, ['x', 'z'])));
-        console.log('old_tiles: %s', util.inspect(_.sortBy(old_tiles, ['x', 'z'])));
+        //console.log('new_tiles: %s', util.inspect(_.sortBy(new_tiles, ['x', 'z'])));
+        //console.log('old_tiles: %s', util.inspect(_.sortBy(old_tiles, ['x', 'z'])));
 
 
         City.Utils.tile_diff(old_tiles, new_tiles);
@@ -28,8 +28,8 @@ require('tap').test('city', function (test) {
         old_tiles = _.sortBy(old_tiles, ['x', 'z']);
         new_tiles = _.sortBy(new_tiles, ['x', 'z']);
 
-        console.log('new_tiles: %s', util.inspect(new_tiles));
-        console.log('old_tiles: %s', util.inspect(old_tiles));
+       // console.log('new_tiles: %s', util.inspect(new_tiles));
+       // console.log('old_tiles: %s', util.inspect(old_tiles));
 
         _.each(_.groupBy(new_tiles, 'state'), function (tiles, state) {
             switch (state) {
@@ -60,7 +60,7 @@ require('tap').test('city', function (test) {
                     });
                     break;
             }
-        });
+        });//408 509 4719
 
         _.each(_.groupBy(old_tiles, 'state'), function (tiles, state) {
             switch (state) {

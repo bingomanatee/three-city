@@ -1,14 +1,14 @@
 (function(root, factory) {
     if(typeof exports === 'object') {
-        module.exports = factory(require('underscore'), require('canvas'), require('three'), require('node-easel'), require('fools'));
+        module.exports = factory(require('lodash'), require('canvas'), require('three'), require('node-easel'), require('fools'), require('objective-three'));
     }
     else if(typeof define === 'function' && define.amd) {
-        define(['_', 'Canvas', 'Three', 'createjs', 'Fools'], factory);
+        define(['_', 'Canvas', 'THREE', 'createjs', 'Fools', 'O3'], factory);
     }
     else {
-        root['City'] = factory(root._, root.Canvas, root.Three, root.createjs, root.Fools);
+        root['City'] = factory(root._, root.Canvas, root.THREE, root.createjs, root.Fools, root.O3);
     }
-}(this, function(_, Canvas, Three, createjs, Fools) {
+}(this, function(_, Canvas, THREE, createjs, Fools, O3) {
 
 function City() {
 
@@ -22,55 +22,32 @@ function City() {
 
     this.display_name = 'city';
 }
-
-var road_cross_texture = THREE.ImageUtils.loadTexture('/img/roads.png', undefined, function (e) {
-    _.extend(road_cross_texture, e);
-    road_cross_texture.loaded = true;
-    console.log('loaded cross texture');
-}, function (err) {
-    console.log('texture load error: ', err);
-});
-road_cross_texture.repeat.set(0.5, 0.5);
-road_cross_texture.offset.set(0, 0.5);
-O3.mat('road+', {
-    type: 'MeshPhongMaterial',
-    //   map: road_cross_texture,
-    side: THREE.DoubleSide,
-    color: new THREE.Color(1, 1, 1)
-});
-
-var road_x_texture = THREE.ImageUtils.loadTexture('img/roads.png');
-road_x_texture.repeat.set(0.5, 0.5);
-road_x_texture.offset.set(0.5, 0.5);
 O3.mat('road-', {
     type: 'MeshPhongMaterial',
     // map: road_x_texture,
     side: THREE.DoubleSide,
     color: new THREE.Color(1, 1, 1)
 });
-
-var road_z_texture = THREE.ImageUtils.loadTexture('img/roads.png');
-road_z_texture.repeat.set(0.5, 0.5);
-road_z_texture.offset.set(0, 0);
-
+O3.mat('road+', {
+    type: 'MeshPhongMaterial',
+    //   map: road_cross_texture,
+    side: THREE.DoubleSide,
+    color: new THREE.Color(1, 1, 1)
+});
 O3.mat('road|', {
     type: 'MeshPhongMaterial',
     //  map: road_z_texture,
     side: THREE.DoubleSide,
     color: new THREE.Color(1, 1, 1)
 });
-
-var road_texture = THREE.ImageUtils.loadTexture('img/roads.png');
-road_texture.repeat.set(0.5, 0.5);
-road_texture.offset.set(0.5, 0);
 O3.mat('road.', {
     type: 'MeshPhongMaterial',
     //   map: road_texture,
     color: new THREE.Color(1, 1, 1)
 });
-
 O3.mat('ground', {type: 'MeshLambertMaterial', color: O3.util.rgb(0.05, 0.5, 0.1)});
 O3.mat('white', {type: 'phong', color: new THREE.Color(1, 1, .5)});
+
 var GRID_SIZE = 20;
 var tile_geo = new THREE.PlaneGeometry(GRID_SIZE, GRID_SIZE, 4, 4);
 
@@ -111,7 +88,7 @@ City.prototype = {
         mesh.rotateX(Math.PI / -2);
         var ro = new O3.RenderObject(null, {name: 'ground plane'});
         ro.obj().add(mesh);
-        ro.obj().translateY(GRID_SIZE/-10);
+        ro.obj().translateY(GRID_SIZE / -10);
         this.display().add(ro);
 
     },
@@ -139,16 +116,21 @@ City.prototype = {
             }});
             this.display().add(this._ground);
         }
-        self._update_ground_tiles(self._ground);
+        self._update_ground_tiles();
         return this._ground;
     },
 
     _update_ground_tiles: function (ground) {
-        var tiles = ground.children.slice();
+        var road_tiles = this.display().find({type: 'roads'});
+
+        var blocks = this.display().find({type: 'blocks'});
 
         var grid_data = this.grid_data();
+
+        var road_diff = this._road_diff(road_tiles, grid_data.roads);
+
         //  console.log('data: ', grid_data);
-        _.each(grid_data, function (data, i) {
+        _.each(grid_data.roads, function (data, i) {
             var root;
 
             if (tiles[i]) {
@@ -168,7 +150,7 @@ City.prototype = {
                     tile.rotateX(Math.PI / -2);
                     root.obj().add(tile);
                     if (!mat.map) {
-                        mat.map = road_cross_texture;
+                        mat.map = TEXTURES.road_cross_texture;
                     }
                     break;
 
@@ -178,7 +160,7 @@ City.prototype = {
                     tile.rotateX(Math.PI / -2);
                     root.obj().add(tile);
                     if (!mat.map) {
-                        mat.map = road_x_texture;
+                        mat.map = TEXTURES.road_x_texture;
                     }
                     break;
 
@@ -188,7 +170,7 @@ City.prototype = {
                     tile.rotateX(Math.PI / -2);
                     root.obj().add(tile);
                     if (!mat.map) {
-                        mat.map = road_z_texture;
+                        mat.map = TEXTURES.road_z_texture;
                     }
                     break;
 
@@ -246,36 +228,50 @@ City.prototype = {
         //   console.log('x_axis: %s, ', x_axis.join(','));
         //  console.log('z_axis: %s, ', z_axis.join(','));
 
-        return Fools.loop(
-            function (iterator, memo, out) {
-                var is_x = (_.contains(x_axis, iterator.x));
-                var is_y = (_.contains(z_axis, iterator.z));
+        return Fools.pipe(
+            Fools.loop(
+                function produce_tiles(iterator, memo) {
+                    var is_x = (_.contains(x_axis, iterator.x));
+                    var is_y = (_.contains(z_axis, iterator.z));
 
-                if (is_x && is_y) {
-                    memo.push(_.extend({type: '+'}, iterator));
-                } else if (is_x) {
-                    memo.push(_.extend({type: '|'}, iterator));
-                } else if (is_y) {
-                    memo.push(_.extend({type: '-'}, iterator));
-                } else {
-
-                    var x1 = iterator.x + 1;
-                    var x0 = iterator.x - 1;
-                    var z1 = iterator.z + 1;
-                    var z0 = iterator.z - 1;
-
-                    if (_.contains(x_axis, x1) || _.contains(x_axis, x0) || _.contains(z_axis, z1) || _.contains(z_axis, z0)) {
-
-                        memo.push(_.extend({type: '.'}, iterator));
+                    if (is_x && is_y) {
+                        memo.push(_.extend({type: '+'}, iterator));
+                    } else if (is_x) {
+                        memo.push(_.extend({type: '|'}, iterator));
+                    } else if (is_y) {
+                        memo.push(_.extend({type: '-'}, iterator));
                     } else {
-                        memo.push(_.extend({type: '*'}, iterator));
-                    }
 
+                        var x1 = iterator.x + 1;
+                        var x0 = iterator.x - 1;
+                        var z1 = iterator.z + 1;
+                        var z0 = iterator.z - 1;
+
+                        if (_.contains(x_axis, x1) || _.contains(x_axis, x0) || _.contains(z_axis, z1) || _.contains(z_axis, z0)) {
+
+                            memo.push(_.extend({type: '.'}, iterator));
+                        } else {
+                            memo.push(_.extend({type: '*'}, iterator));
+                        }
+
+                    }
+                    //if (out.place('x', iterator) == 'last') memo.push('*');
+                    return memo;
                 }
-                //if (out.place('x', iterator) == 'last') memo.push('*');
-                return memo;
-            }
-        ).dim('x').min(range.x.min).max(range.x.max).dim('z').min(range.z.min).max(range.z.max)([]);
+            ).dim('x').min(range.x.min).max(range.x.max).dim('z').min(range.z.min).max(range.z.max),
+            function group_tiles_by_type(data) {
+                return _.groupBy(data, 'type');
+            },
+            function group_block_tiles(grouped_data) {
+
+                var tiles = grouped_data['.'];
+                delete grouped_data['.'];
+                return {
+                    roads: _.flatten(_.values(grouped_data)),
+                    blocks: Block.make_blocks(tiles)
+                };
+            })
+            ([]);
     },
 
     axis: function (dim) {
@@ -300,7 +296,222 @@ City.prototype = {
     }
 
 
+};
+
+var TEXTURES = {};
+
+_.each(
+    {
+        road_cross_texture: {
+            name: '/img/roads.png',
+            repeat: [0.5, 0.5],
+            offset: [0, 0.5]
+        },
+        road_x_texture: {
+            name: 'img/roads.png',
+            repeat: [0.5, 0.5],
+            offset: [0.5, 0.5]
+        },
+        road_z_texture: {
+            name: 'img/roads.png',
+            repeat: [0.5, 0.5],
+            offset: [0, 0]
+        },
+        road_texture: {
+            name: 'img/roads.png',
+            repeat: [0.5, 0.5],
+            offset: [0.5, 0]
+        }
+    },
+
+    function (data, key) {
+        if (typeof Image == 'undefined'){
+            TEXTURES[key] = null;
+        } else {
+            var texture = THREE.ImageUtils.loadTexture(data.name);
+            road_texture.repeat.set(data.repeat[0], data.repeat[1]);
+            road_texture.offset.set(data.offset[0], data.repeat[1]);
+            TEXTURES[key] = texture;
+        }
+    });
+
+var Utils = {
+    _tile_cmp: function (t1, t2) {
+        if (t1.x < t2.x) {
+            return -1;
+        } else if (t1.x == t2.x) {
+            if (t1.z < t2.z) {
+                return -1;
+            } else if (t1.z == t2.z) {
+                return 0;
+            }
+        }
+        return 1;
+    },
+    tile_diff: function (old_roads, new_roads) {
+        _.each(old_roads, function (r) {
+            r.state = '';
+        });
+
+        _.each(new_roads, function (r) {
+            r.state = '';
+        })
+        var old_roads_s = _.sortBy(old_roads, ['x', 'z']);
+        var new_roads_s = _.sortBy(new_roads, ['x', 'z']);
+
+        var util = require('util');
+
+        while (old_roads_s.length && new_roads_s.length) {
+            var old_road = old_roads_s[0];
+            var new_road = new_roads_s[0];
+
+            console.log('old: %s, new: %s', util.inspect(old_road), util.inspect(new_road));
+
+            switch (Utils._tile_cmp (old_road, new_road)) {
+                case -1:
+                    console.log('old is absent');
+                    old_road.state = 'absent';
+                    old_roads_s.shift();
+                    break;
+                case 0:
+                    console.log('both are old');
+                    old_road.state = 'old';
+                    new_road.state = 'old';
+                    old_roads_s.shift();
+                    new_roads_s.shift();
+                    break;
+
+                case 1:
+                    console.log('new is new');
+                    new_road.state = 'new';
+                    new_roads_s.shift();
+                    break;
+            }
+
+        }
+
+        _.each(old_roads_s, function (r) {
+            r.state = 'absent';
+        });
+        _.each(new_roads_s, function (r) {
+            r.state = 'new';
+        })
+    }
+};
+City.Utils = Utils;
+function Block() {
+
+    this.tiles = [];
+    this.max_x = 0;
+    this.min_x = 0;
+    this.max_z = 0;
+    this.min_z = 0;
+
 }
+
+Block.prototype = {
+    add: function (item) {
+
+        if (this.tiles.length) {
+            this.max_x = Math.max(item.x, this.max_x);
+            this.min_x = Math.min(item.x, this.min_x);
+            this.max_z = Math.max(item.z, this.max_z);
+            this.min_z = Math.min(item.z, this.min_z);
+        } else {
+            this.max_x = this.min_x = item.x;
+            this.max_z = this.min_z = item.z;
+        }
+        this.tiles.push(item);
+    },
+
+    order_tiles: function () {
+        this.tiles = _.sortBy(this.tiles, ['x', 'z'])
+    },
+
+    can_add: function (item) {
+
+        if (this.tiles.length < 1) {
+            return true;
+        }
+
+        if (item.x > this.max_x + 1) {
+            return false;
+        } else if (item.x < this.min_x - 1) {
+            return false;
+        } else if (item.z > this.max_z + 1) {
+            return false;
+        } else if (item.z < this.min_z - 1) {
+            return false;
+        }
+
+        return _.find(this.tiles, function (tile) {
+
+            var difference = Math.abs(tile.x - item.x) + Math.abs(tile.z - item.z);
+            //    var util = require('util');
+            //   console.log('difference: %s for %s .. %s', difference, util.inspect(tile), util.inspect(item));
+            return difference <= 1;
+        }, this);
+    },
+
+    can_merge: function (block) {
+
+        return _.find(block.tiles, function (tile) {
+            return this.can_add(tile);
+        }, this);
+
+    },
+
+    merge: function (block) {
+        this.tiles = this.tiles.concat(block.tiles);
+        this.min_x = Math.min(this.min_x, block.min_x);
+        this.min_z = Math.min(this.min_z, block.min_z);
+        this.max_x = Math.max(this.max_x, block.max_x);
+        this.max_z = Math.max(this.max_z, block.max_z);
+        block.tiles = [];
+    }
+};
+
+Block.merge_blocks = function (blocks) {
+    return  _.reduce(blocks, function (whole_blocks, block) {
+
+        var mergable_block = _.find(whole_blocks, function (w) {
+            return w.can_merge(block);
+        });
+
+        if (mergable_block) {
+            mergable_block.merge(block);
+        } else {
+            whole_blocks.push(block);
+        }
+
+        return whole_blocks;
+    }, [])
+}
+
+Block.make_blocks = function (tiles) {
+    var blocks = [];
+
+    _.each(tiles, function (item) {
+        var adjacent_block = _.find(blocks, function (block) {
+            return block.can_add(item);
+        });
+
+        if (!adjacent_block) {
+            var block = new Block();
+            block.add(item);
+            blocks.push(block);
+        } else {
+            adjacent_block.add(item);
+        }
+    });
+
+    return  Block.sort_blocks(Block.merge_blocks(blocks));
+};
+
+Block.sort_blocks = function (blocks) {
+    return _.sortBy(blocks, ['min_x', 'min_z', 'max_x', 'max_z']);
+};
+City.Block = Block;
 
 return City;
 

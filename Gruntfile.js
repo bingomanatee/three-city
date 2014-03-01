@@ -4,7 +4,7 @@ module.exports = function (grunt) {
         concat: {
             base: {
                 files: {
-                    'build/city.js': ['src/city.js']
+                    'build/city.js': [ 'src/City.js', 'src/textures.js', 'src/Utils.js', 'src/Block.js']
                 }
             }
         },
@@ -14,8 +14,8 @@ module.exports = function (grunt) {
                 dest: 'city.js',
                 globalAlias: 'City',
                 deps: {
-                    'default': ['_', 'Canvas', 'Three', 'createjs', 'Fools'],
-                    cjs: ['underscore', 'canvas', 'three', 'node-easel', 'fools']
+                    'default': ['_', 'Canvas', 'THREE', 'createjs', 'Fools', 'O3'],
+                    cjs: ['lodash', 'canvas', 'three', 'node-easel', 'fools', 'objective-three']
                 },
                 objectToExport: 'City'
             }
@@ -25,7 +25,7 @@ module.exports = function (grunt) {
                 files: [
                     // includes files within path
                     {expand: true, src: 'city.js', dest: 'site/js/', filter: 'isFile'}
-                    ]
+                ]
             }
         }
 

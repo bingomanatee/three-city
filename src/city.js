@@ -10,55 +10,32 @@ function City() {
 
     this.display_name = 'city';
 }
-
-var road_cross_texture = THREE.ImageUtils.loadTexture('/img/roads.png', undefined, function (e) {
-    _.extend(road_cross_texture, e);
-    road_cross_texture.loaded = true;
-    console.log('loaded cross texture');
-}, function (err) {
-    console.log('texture load error: ', err);
-});
-road_cross_texture.repeat.set(0.5, 0.5);
-road_cross_texture.offset.set(0, 0.5);
-O3.mat('road+', {
-    type: 'MeshPhongMaterial',
-    //   map: road_cross_texture,
-    side: THREE.DoubleSide,
-    color: new THREE.Color(1, 1, 1)
-});
-
-var road_x_texture = THREE.ImageUtils.loadTexture('img/roads.png');
-road_x_texture.repeat.set(0.5, 0.5);
-road_x_texture.offset.set(0.5, 0.5);
 O3.mat('road-', {
     type: 'MeshPhongMaterial',
     // map: road_x_texture,
     side: THREE.DoubleSide,
     color: new THREE.Color(1, 1, 1)
 });
-
-var road_z_texture = THREE.ImageUtils.loadTexture('img/roads.png');
-road_z_texture.repeat.set(0.5, 0.5);
-road_z_texture.offset.set(0, 0);
-
+O3.mat('road+', {
+    type: 'MeshPhongMaterial',
+    //   map: road_cross_texture,
+    side: THREE.DoubleSide,
+    color: new THREE.Color(1, 1, 1)
+});
 O3.mat('road|', {
     type: 'MeshPhongMaterial',
     //  map: road_z_texture,
     side: THREE.DoubleSide,
     color: new THREE.Color(1, 1, 1)
 });
-
-var road_texture = THREE.ImageUtils.loadTexture('img/roads.png');
-road_texture.repeat.set(0.5, 0.5);
-road_texture.offset.set(0.5, 0);
 O3.mat('road.', {
     type: 'MeshPhongMaterial',
     //   map: road_texture,
     color: new THREE.Color(1, 1, 1)
 });
-
 O3.mat('ground', {type: 'MeshLambertMaterial', color: O3.util.rgb(0.05, 0.5, 0.1)});
 O3.mat('white', {type: 'phong', color: new THREE.Color(1, 1, .5)});
+
 var GRID_SIZE = 20;
 var tile_geo = new THREE.PlaneGeometry(GRID_SIZE, GRID_SIZE, 4, 4);
 
@@ -99,7 +76,7 @@ City.prototype = {
         mesh.rotateX(Math.PI / -2);
         var ro = new O3.RenderObject(null, {name: 'ground plane'});
         ro.obj().add(mesh);
-        ro.obj().translateY(GRID_SIZE/-10);
+        ro.obj().translateY(GRID_SIZE / -10);
         this.display().add(ro);
 
     },
@@ -127,16 +104,21 @@ City.prototype = {
             }});
             this.display().add(this._ground);
         }
-        self._update_ground_tiles(self._ground);
+        self._update_ground_tiles();
         return this._ground;
     },
 
     _update_ground_tiles: function (ground) {
-        var tiles = ground.children.slice();
+        var road_tiles = this.display().find({type: 'roads'});
+
+        var blocks = this.display().find({type: 'blocks'});
 
         var grid_data = this.grid_data();
+
+        var road_diff = this._road_diff(road_tiles, grid_data.roads);
+
         //  console.log('data: ', grid_data);
-        _.each(grid_data, function (data, i) {
+        _.each(grid_data.roads, function (data, i) {
             var root;
 
             if (tiles[i]) {
@@ -156,7 +138,7 @@ City.prototype = {
                     tile.rotateX(Math.PI / -2);
                     root.obj().add(tile);
                     if (!mat.map) {
-                        mat.map = road_cross_texture;
+                        mat.map = TEXTURES.road_cross_texture;
                     }
                     break;
 
@@ -166,7 +148,7 @@ City.prototype = {
                     tile.rotateX(Math.PI / -2);
                     root.obj().add(tile);
                     if (!mat.map) {
-                        mat.map = road_x_texture;
+                        mat.map = TEXTURES.road_x_texture;
                     }
                     break;
 
@@ -176,7 +158,7 @@ City.prototype = {
                     tile.rotateX(Math.PI / -2);
                     root.obj().add(tile);
                     if (!mat.map) {
-                        mat.map = road_z_texture;
+                        mat.map = TEXTURES.road_z_texture;
                     }
                     break;
 
@@ -234,36 +216,50 @@ City.prototype = {
         //   console.log('x_axis: %s, ', x_axis.join(','));
         //  console.log('z_axis: %s, ', z_axis.join(','));
 
-        return Fools.loop(
-            function (iterator, memo, out) {
-                var is_x = (_.contains(x_axis, iterator.x));
-                var is_y = (_.contains(z_axis, iterator.z));
+        return Fools.pipe(
+            Fools.loop(
+                function produce_tiles(iterator, memo) {
+                    var is_x = (_.contains(x_axis, iterator.x));
+                    var is_y = (_.contains(z_axis, iterator.z));
 
-                if (is_x && is_y) {
-                    memo.push(_.extend({type: '+'}, iterator));
-                } else if (is_x) {
-                    memo.push(_.extend({type: '|'}, iterator));
-                } else if (is_y) {
-                    memo.push(_.extend({type: '-'}, iterator));
-                } else {
-
-                    var x1 = iterator.x + 1;
-                    var x0 = iterator.x - 1;
-                    var z1 = iterator.z + 1;
-                    var z0 = iterator.z - 1;
-
-                    if (_.contains(x_axis, x1) || _.contains(x_axis, x0) || _.contains(z_axis, z1) || _.contains(z_axis, z0)) {
-
-                        memo.push(_.extend({type: '.'}, iterator));
+                    if (is_x && is_y) {
+                        memo.push(_.extend({type: '+'}, iterator));
+                    } else if (is_x) {
+                        memo.push(_.extend({type: '|'}, iterator));
+                    } else if (is_y) {
+                        memo.push(_.extend({type: '-'}, iterator));
                     } else {
-                        memo.push(_.extend({type: '*'}, iterator));
-                    }
 
+                        var x1 = iterator.x + 1;
+                        var x0 = iterator.x - 1;
+                        var z1 = iterator.z + 1;
+                        var z0 = iterator.z - 1;
+
+                        if (_.contains(x_axis, x1) || _.contains(x_axis, x0) || _.contains(z_axis, z1) || _.contains(z_axis, z0)) {
+
+                            memo.push(_.extend({type: '.'}, iterator));
+                        } else {
+                            memo.push(_.extend({type: '*'}, iterator));
+                        }
+
+                    }
+                    //if (out.place('x', iterator) == 'last') memo.push('*');
+                    return memo;
                 }
-                //if (out.place('x', iterator) == 'last') memo.push('*');
-                return memo;
-            }
-        ).dim('x').min(range.x.min).max(range.x.max).dim('z').min(range.z.min).max(range.z.max)([]);
+            ).dim('x').min(range.x.min).max(range.x.max).dim('z').min(range.z.min).max(range.z.max),
+            function group_tiles_by_type(data) {
+                return _.groupBy(data, 'type');
+            },
+            function group_block_tiles(grouped_data) {
+
+                var tiles = grouped_data['.'];
+                delete grouped_data['.'];
+                return {
+                    roads: _.flatten(_.values(grouped_data)),
+                    blocks: Block.make_blocks(tiles)
+                };
+            })
+            ([]);
     },
 
     axis: function (dim) {
@@ -288,4 +284,4 @@ City.prototype = {
     }
 
 
-}
+};

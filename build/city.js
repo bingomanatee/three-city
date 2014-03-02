@@ -10,36 +10,10 @@ function City() {
 
     this.display_name = 'city';
 }
-O3.mat('road-', {
-    type: 'MeshPhongMaterial',
-    side: THREE.DoubleSide,
-    receiveShadow: true,
-    color: new THREE.Color(1, 1, 1)
-});
-O3.mat('road+', {
-    type: 'MeshPhongMaterial',
-    side: THREE.DoubleSide,
-    receiveShadow: true,
-    color: new THREE.Color(1, 1, 1)
-});
-O3.mat('road|', {
-    type: 'MeshPhongMaterial',
-    side: THREE.DoubleSide,
-    receiveShadow: true,
-    color: new THREE.Color(1, 1, 1)
-});
-O3.mat('road.', {
-    type: 'MeshPhongMaterial',
-    receiveShadow: true,
-    color: new THREE.Color(1, 1, 1)
-});
-O3.mat('ground', {type: 'MeshLambertMaterial', receiveShadow: true, color: O3.util.rgb(0.05, 0.5, 0.1)});
-O3.mat('white', {type: 'phong', receiveShadow: true, color: new THREE.Color(0.8,0.8,0.8)});
-O3.mat('light', {type: 'MeshBasicMaterial', color: new THREE.Color(1, 1, 0.8)});
 
 City.GRID_SIZE = 50;
 
-var cube_geo = new THREE.CubeGeometry(City.GRID_SIZE, City.GRID_SIZE,City.GRID_SIZE,1,1,1);
+var cube_geo = new THREE.CubeGeometry(City.GRID_SIZE, City.GRID_SIZE, City.GRID_SIZE, 1, 1, 1);
 cube_geo.castShadow = true;
 
 City.prototype = {
@@ -52,18 +26,18 @@ City.prototype = {
             var light = _.extend(new THREE.DirectionalLight(), {
                 shadowCameraLeft: -D, shadowCameraRight: D, shadowCameraTop: -D, shadowCameraBottom: D,
                 castShadow: true, shadowCameraVisible: true, shadowMapWidth: Math.pow(2, 12), shadowMapHeight: Math.pow(2, 12)});
-            light.scale.set(2,2,2);
-            var sun_light = new O3.RenderObject(light, function(){
+            light.scale.set(2, 2, 2);
+            var sun_light = new O3.RenderObject(light, function () {
 
             });
 
             var sun = new O3.RenderObject(null).at(0, City.GRID_SIZE * 4, 0);
-/*
-            var sun_spot = new THREE.Mesh(new THREE.PlaneGeometry(City.GRID_SIZE/4, City.GRID_SIZE/4), this._display.mat('light').obj());
-            sun_spot.rotateX(Math.PI/-2);
-            sun_spot.castShadow = sun_spot.receiveShadow = false;
-            var ro = new O3.RenderObject(sun_spot);
-           // sun.add(ro);*/
+            /*
+             var sun_spot = new THREE.Mesh(new THREE.PlaneGeometry(City.GRID_SIZE/4, City.GRID_SIZE/4), this._display.mat('light').obj());
+             sun_spot.rotateX(Math.PI/-2);
+             sun_spot.castShadow = sun_spot.receiveShadow = false;
+             var ro = new O3.RenderObject(sun_spot);
+             // sun.add(ro);*/
             sun.add(sun_light);
             sun.at(City.GRID_SIZE * -4, City.GRID_SIZE * 16, City.GRID_SIZE * -6);
             this._display.add(sun);
@@ -74,7 +48,7 @@ City.prototype = {
             }})).at(City.GRID_SIZE * -4, City.GRID_SIZE * 2, City.GRID_SIZE * 6);
 
             cam.obj().add(camera);
-        cam.obj().rotateX(Math.PI/-4);
+            cam.obj().rotateX(Math.PI / -4);
             var sphere = new THREE.Mesh(new THREE.SphereGeometry(City.GRID_SIZE / 2), this._display.mat('white').obj());
             this._display.add(new O3.RenderObject(sphere));
             this.ground_tiles();
@@ -107,7 +81,7 @@ City.prototype = {
             //console.log('tower: ', obj, 'mats:', mats);
             var mesh = new THREE.Mesh(obj, new THREE.MeshFaceMaterial(mats));
             mesh.scale.set(City.GRID_SIZE / 2, City.GRID_SIZE / 2, City.GRID_SIZE / 2);
-           // this.display().add(new O3.RenderObject(mesh, {name: 'tower'}));
+            // this.display().add(new O3.RenderObject(mesh, {name: 'tower'}));
             self._tower = mesh;
         }.bind(this), '/img/');
 
@@ -161,17 +135,10 @@ City.prototype = {
             case '-':
             case '|':
                 mat = this.display().mat('road' + type);
-                if (!mat.faceMat){
-                    mat.faceMat = new THREE.MeshFaceMaterial([mat.obj()]);
-                }
 
-                mesh = new THREE.Mesh(block.geometry(), mat.faceMat);
+                mesh = block.mesh(type);
                 mesh.rotateX(Math.PI / -2);
-                mesh.receiveShadow = mesh.castShadow  = true;
-
-                if (!mat.obj().map) {
-                    mat.obj().map = TEXTURES.roads[type];
-                }
+                mesh.receiveShadow = mesh.castShadow = true;
 
                 var ro = new O3.RenderObject(mesh, {type: type, update_on_animate: false});
                 root = new O3.RenderObject();
@@ -179,8 +146,8 @@ City.prototype = {
 
                 var x_offset = (block.width() - 1);
                 var z_offset = (block.depth() - 1);
-                var x = block.min_x + x_offset/2;
-                var z = block.min_z + z_offset/2;
+                var x = block.min_x + x_offset / 2;
+                var z = block.min_z + z_offset / 2;
 
                 root.at(x * City.GRID_SIZE, 0, z * City.GRID_SIZE);
                 break;
@@ -189,38 +156,46 @@ City.prototype = {
 
                 var self = this;
 
-                function tower_mesh() {
-                    geometries = _.map(block.tiles, function (data) {
-                        var geo = self._tower.geometry.clone();
-                        geo.position.set(data.x * City.GRID_SIZE, 0, data.z * City.GRID_SIZE);
-                        return geo;
-                    });
-                    return new THREE.Mesh(Util.merge_geometries(geometries), self._tower.material);
-                }
+            function tower_mesh() {
+                var center = new THREE.Object3D();
 
-                if (this._tower) {
-                    // drawing single block of towers
+                _.each(block.tiles, function (data) {
+                    var tower = self._tower.clone();
+                    tower.position.set(data.x * City.GRID_SIZE, 0, data.z * City.GRID_SIZE);
+                    center.add(tower);
+                });
+                return center;
+            }
 
-                 //   root = new O3.RenderObject(tower_mesh(), {type: type})
-                } else {
-                    // drawing towers when tower becomes available.
-              /*      root = new O3.RenderObject(null, function () {
+                root = new O3.RenderObject();
 
-                        if (this._tower) {
-                            root.obj(tower_mesh());
-                        }
-                        root.update_on_animate = false;
-                        root.update = _.identity;
-                    }.bind(this));*/
-                }
-
-                 root = new O3.RenderObject();
-                _.each(block.tiles, function(tile){
+                var cubes = [];
+                _.each(block.tiles, function (tile) {
                     var cube = new THREE.Mesh(cube_geo, this.display().mat('white').obj());
                     cube.receiveShadow = true;
                     cube.castShadow = true;
-                    root.add(new O3.RenderObject(cube).at(City.GRID_SIZE * tile.x, 0, City.GRID_SIZE * tile.z));
+                    var cube_ro = new O3.RenderObject(cube);
+                    cube_ro.at(City.GRID_SIZE * tile.x, 0, City.GRID_SIZE * tile.z);
+                    root.add(cube_ro);
+                    cubes.push(cube_ro);
                 }, this);
+
+                root.update = function () {
+                    if (root.merged) {
+                        return;
+                    }
+                    if (self._tower) {
+                        _.each(cubes, function (cube) {
+                            root.remove(cube);
+                        });
+
+                        root.add(new O3.RenderObject(tower_mesh()));
+                        root.update = _.identity;
+                        root.update_on_animate = false;
+                        root.merged = true;
+                    }
+                }
+
                 break;
 
         }
@@ -278,25 +253,25 @@ _.each(
         {
             type: '+',
             name: '/img/road+.png',
-            repeat: [1,1],
+            repeat: [1, 1],
             offset: [0.0]
         },
         {
             type: '-',
             name: 'img/road-.png',
-            repeat: [1,1],
+            repeat: [1, 1],
             offset: [0.0]
         },
         {
             type: '|',
             name: 'img/roadl.png',
-            repeat: [1,1],
+            repeat: [1, 1],
             offset: [0.0]
         },
         {
             type: '.',
             name: 'img/roads.png',
-            repeat: [1,1],
+            repeat: [1, 1],
             offset: [0.0]
         }
     ],
@@ -306,13 +281,40 @@ _.each(
             TEXTURES.roads[data.type] = null;
         } else {
             var texture = THREE.ImageUtils.loadTexture(data.name);
+            texture._url = data.name;
             //texture.repeat.set(data.repeat[0], data.repeat[1]);
             //texture.offset.set(data.offset[0], data.offset[1]);
-            texture.repeatS = texture.repatT = THREE.RepeatWrapping;
+            texture.repeatS = texture.repeatT = THREE.RepeatWrapping;
             TEXTURES.roads[data.type] = texture;
         }
     });
 
+O3.mat('road-', {
+    type: 'MeshPhongMaterial',
+    side: THREE.DoubleSide,
+    receiveShadow: true,
+    color: new THREE.Color(1, 1, 1)
+});
+O3.mat('road+', {
+    type: 'MeshPhongMaterial',
+    side: THREE.DoubleSide,
+    receiveShadow: true,
+    color: new THREE.Color(1, 1, 1)
+});
+O3.mat('road|', {
+    type: 'MeshPhongMaterial',
+    side: THREE.DoubleSide,
+    receiveShadow: true,
+    color: new THREE.Color(1, 1, 1)
+});
+O3.mat('road.', {
+    type: 'MeshPhongMaterial',
+    receiveShadow: true,
+    color: new THREE.Color(1, 1, 1)
+});
+O3.mat('ground', {type: 'MeshLambertMaterial', receiveShadow: true, color: O3.util.rgb(0.05, 0.5, 0.1)});
+O3.mat('white', {type: 'phong', receiveShadow: true, color: new THREE.Color(0.8, 0.8, 0.8)});
+O3.mat('light', {type: 'MeshBasicMaterial', color: new THREE.Color(1, 1, 0.8)});
 var Utils = {
     _tile_cmp: function (t1, t2) {
         if (t1.x < t2.x) {
@@ -607,22 +609,41 @@ Block.prototype = {
         block.tiles = [];
     },
 
-    width: function(){
-       return this.max_x - this.min_x + 1;
+    width: function () {
+        return this.max_x - this.min_x + 1;
     },
 
-    depth: function(){
+    depth: function () {
         return this.max_z - this.min_z + 1;
     },
 
-    geometry: function(){
+    geometry: function () {
         var geo = new THREE.PlaneGeometry(this.width() * City.GRID_SIZE, this.depth() * City.GRID_SIZE, this.width(), this.depth());
-        _.each(_.flatten(geo.faceVertexUvs), function(uv){
+        _.each(_.flatten(geo.faceVertexUvs), function (uv) {
         }, this);
-        _.each(geo.faces, function(f){
+        _.each(geo.faces, function (f) {
             f.materialIndex = 0;
         });
         return geo;
+    },
+
+    mesh: function (type) {
+        var t = TEXTURES.roads[type];
+        var variation = this.width() + ',' + this.depth();
+        if (!t[variation]){
+            t[variation] = THREE.ImageUtils.loadTexture(t._url);
+            t[variation].wrapS = THREE.RepeatWrapping;
+            t[variation].wrapT = THREE.RepeatWrapping;
+            t[variation].repeat.set(this.width(), this.depth());
+            t[variation].mat = new THREE.MeshPhongMaterial();
+        }
+
+        var mesh = new THREE.Mesh(this.geometry(), t[variation].mat);
+
+        if (!mesh.material.map){
+            mesh.material.map = t[variation];
+        }
+        return mesh;
     }
 };
 

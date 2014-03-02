@@ -69,22 +69,41 @@ Block.prototype = {
         block.tiles = [];
     },
 
-    width: function(){
-       return this.max_x - this.min_x + 1;
+    width: function () {
+        return this.max_x - this.min_x + 1;
     },
 
-    depth: function(){
+    depth: function () {
         return this.max_z - this.min_z + 1;
     },
 
-    geometry: function(){
+    geometry: function () {
         var geo = new THREE.PlaneGeometry(this.width() * City.GRID_SIZE, this.depth() * City.GRID_SIZE, this.width(), this.depth());
-        _.each(_.flatten(geo.faceVertexUvs), function(uv){
+        _.each(_.flatten(geo.faceVertexUvs), function (uv) {
         }, this);
-        _.each(geo.faces, function(f){
+        _.each(geo.faces, function (f) {
             f.materialIndex = 0;
         });
         return geo;
+    },
+
+    mesh: function (type) {
+        var t = TEXTURES.roads[type];
+        var variation = this.width() + ',' + this.depth();
+        if (!t[variation]){
+            t[variation] = THREE.ImageUtils.loadTexture(t._url);
+            t[variation].wrapS = THREE.RepeatWrapping;
+            t[variation].wrapT = THREE.RepeatWrapping;
+            t[variation].repeat.set(this.width(), this.depth());
+            t[variation].mat = new THREE.MeshPhongMaterial();
+        }
+
+        var mesh = new THREE.Mesh(this.geometry(), t[variation].mat);
+
+        if (!mesh.material.map){
+            mesh.material.map = t[variation];
+        }
+        return mesh;
     }
 };
 

@@ -4,7 +4,7 @@ module.exports = function (grunt) {
         concat: {
             base: {
                 files: {
-                    'build/city.js': [ 'src/City.js', 'src/Building.js', 'src/textures.js', 'src/Utils.js', 'src/Block.js']
+                    'build/city.js': [ 'src/City.js', 'src/Building.js', 'src/textures.js', 'src/Utils.js','src/Wall.js', 'src/Block.js']
                 }
             }
         },

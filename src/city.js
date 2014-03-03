@@ -9,6 +9,8 @@ function City() {
     this.z_period = 6;
 
     this.display_name = 'city';
+
+    this.building_types = [];
 }
 
 City.GRID_SIZE = 50;
@@ -21,50 +23,55 @@ City.prototype = {
     display: function () {
         if (!this._display) {
             this._display = O3.display(this.display_name);
+            this._display.renderer().shadowMapEnabled = true;
 
             var D = 64 * this.extent;
+            //    console.log('map size: ', D);
             var light = _.extend(new THREE.DirectionalLight(), {
-                shadowCameraLeft: -D, shadowCameraRight: D, shadowCameraTop: -D, shadowCameraBottom: D,
-                castShadow: true, shadowCameraVisible: true, shadowMapWidth: Math.pow(2, 12), shadowMapHeight: Math.pow(2, 12)});
+                shadowCameraLeft: -D, shadowCameraRight: D, shadowCameraTop: -D, shadowCameraBottom: D, shadowBias: -0.001,
+                castShadow: true, shadowCameraVisible: true, shadowMapWidth: 1024 * 8, shadowMapHeight: 1024 * 8});
             light.scale.set(2, 2, 2);
             var sun_light = new O3.RenderObject(light, function () {
 
             });
 
             var sun = new O3.RenderObject(null).at(0, City.GRID_SIZE * 4, 0);
-            /*
-             var sun_spot = new THREE.Mesh(new THREE.PlaneGeometry(City.GRID_SIZE/4, City.GRID_SIZE/4), this._display.mat('light').obj());
-             sun_spot.rotateX(Math.PI/-2);
-             sun_spot.castShadow = sun_spot.receiveShadow = false;
-             var ro = new O3.RenderObject(sun_spot);
-             // sun.add(ro);*/
             sun.add(sun_light);
-            sun.at(City.GRID_SIZE * -4, City.GRID_SIZE * 16, City.GRID_SIZE * -6);
+            sun.at(City.GRID_SIZE * -4, City.GRID_SIZE * 16, City.GRID_SIZE * 6);
             this._display.add(sun);
+
+            var hemi = new O3.RenderObject(new THREE.HemisphereLight(O3.util.rgb(0.8, .75, 1), O3.util.rgb(0.5, 0.1, 0), 0.125), {name: 'hemi-sky'});
+            this._display.add(hemi);
 
             var camera = this._display.camera();
             var cam = this._display.add(new O3.RenderObject(null, {name: 'camera', update: function () {
-                this.obj().translateY(0.5);
-            }})).at(City.GRID_SIZE * -4, City.GRID_SIZE * 2, City.GRID_SIZE * 6);
+                this.obj().translateY(1);
+            }})).at(City.GRID_SIZE * -4, City.GRID_SIZE * 6, City.GRID_SIZE * 6);
 
             cam.obj().add(camera);
-            cam.obj().rotateX(Math.PI / -4);
+            cam.obj().rotateX(Math.PI / -3);
             var sphere = new THREE.Mesh(new THREE.SphereGeometry(City.GRID_SIZE / 2), this._display.mat('white').obj());
             this._display.add(new O3.RenderObject(sphere));
             this.ground_tiles();
 
             this.tower();
-
-            this._display.renderer().shadowMapEnabled = true;
-
-            // this.ground_plane();
+            this.ground_plane();
         }
         return this._display;
+    },
+
+    add_building_type: function (n, f, s, t) {
+        this.building_types.push(new Building(n, f, s, t));
+    },
+
+    building: function(){
+        return _.sample(this.building_types).mesh(this._tower);
     },
 
     ground_plane: function () {
         var g = new THREE.PlaneGeometry(City.GRID_SIZE * this.extent * 2, City.GRID_SIZE * this.extent * 2, this.extent * 2, this.extent * 2);
         var mesh = new THREE.Mesh(g, this.display().mat('ground').obj());
+        mesh.receiveShadow = true;
         mesh.rotateX(Math.PI / -2);
         var ro = new O3.RenderObject(null, {name: 'ground plane'});
         ro.obj().add(mesh);
@@ -77,7 +84,7 @@ City.prototype = {
         var loader = new THREE.JSONLoader();
 
         var self = this;
-        loader.load('/3d/tower.json', function (obj, mats) {
+        loader.load('/3d/tower2.js', function (obj, mats) {
             //console.log('tower: ', obj, 'mats:', mats);
             var mesh = new THREE.Mesh(obj, new THREE.MeshFaceMaterial(mats));
             mesh.scale.set(City.GRID_SIZE / 2, City.GRID_SIZE / 2, City.GRID_SIZE / 2);
@@ -156,17 +163,6 @@ City.prototype = {
 
                 var self = this;
 
-            function tower_mesh() {
-                var center = new THREE.Object3D();
-
-                _.each(block.tiles, function (data) {
-                    var tower = self._tower.clone();
-                    tower.position.set(data.x * City.GRID_SIZE, 0, data.z * City.GRID_SIZE);
-                    center.add(tower);
-                });
-                return center;
-            }
-
                 root = new O3.RenderObject();
 
                 var cubes = [];
@@ -174,7 +170,7 @@ City.prototype = {
                     var cube = new THREE.Mesh(cube_geo, this.display().mat('white').obj());
                     cube.receiveShadow = true;
                     cube.castShadow = true;
-                    var cube_ro = new O3.RenderObject(cube);
+                    var cube_ro = new O3.RenderObject(cube, {data: tile});
                     cube_ro.at(City.GRID_SIZE * tile.x, 0, City.GRID_SIZE * tile.z);
                     root.add(cube_ro);
                     cubes.push(cube_ro);
@@ -185,14 +181,23 @@ City.prototype = {
                         return;
                     }
                     if (self._tower) {
+                        var mesh;
                         _.each(cubes, function (cube) {
                             root.remove(cube);
+                            var tower = self.building();
+                            tower.position.set(cube.data.x * City.GRID_SIZE, Math.floor(Math.random() * 4) * -City.GRID_SIZE, cube.data.z * City.GRID_SIZE);
+                            if (mesh){
+                                
+                            } else {
+                                mesh = tower;
+                            }
+                            root.add(new O3.RenderObject(tower).at());
+
+                            root.update = _.identity;
+                            root.update_on_animate = false;
+                            root.merged = true;
                         });
 
-                        root.add(new O3.RenderObject(tower_mesh()));
-                        root.update = _.identity;
-                        root.update_on_animate = false;
-                        root.merged = true;
                     }
                 }
 

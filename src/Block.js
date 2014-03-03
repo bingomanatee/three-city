@@ -99,7 +99,7 @@ Block.prototype = {
         }
 
         var mesh = new THREE.Mesh(this.geometry(), t[variation].mat);
-
+         mesh.receiveShadow = mesh.castShadow = true;
         if (!mesh.material.map){
             mesh.material.map = t[variation];
         }

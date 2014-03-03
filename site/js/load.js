@@ -55,7 +55,7 @@ $(function () {
 
     var city = new City();
 
-    city.add_building_type('skyscraper', slice.parent, [1, 0, 1], [0,1,1]);
+    city.add_building_type('skyscraper', slice.parent, [0.7, 0.7, 0.7], [0.8, 0.8, 0.8]);
     city.display().size(window.innerWidth, window.innerHeight);
     city.display().append(document.body);
 

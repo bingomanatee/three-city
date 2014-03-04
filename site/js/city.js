@@ -659,17 +659,17 @@ function Wall(params) {
 
     this.window_sizes = {
         h: [2, 5, 3],
-        v: [4, 1, 4, 1, 4, 1, 4, 1, 4, 1, 4, 1, 4]
+        v: [4, 1, 4, 1, 4, 1, 4, 1, 4, 1, 4, 1, 4, 1, 4, 1, 4, 1, 4, 1, 4, 1, 4, 1, 4]
     };
 
     this.margin = {
-        h: [1, 5, 1], // relative to a single window, the left and right margins.
+        h: [1, 3, 1], // relative to a single window, the left and right margins.
         v: [1, 10, 0]    // relative to a single story: top height margin, story height, bottom margin (typically 0).
     };
 
     this.window_frame = {
-        h_proportions: [1, 12, 1],
-        v_proportions: [1, 20, 1],
+        h_proportions: [1, 8, 1],
+        v_proportions: [10, 20, 4],
         color: new THREE.Color(0.4, 0, 0.2)
     };
 
@@ -727,7 +727,7 @@ function _p(a, i, s) {
 
 Wall.prototype = {
 
-    windows: function(){
+    windows: function () {
         return Math.floor(this.window_sizes.v.length / 2);
     },
 
@@ -753,6 +753,7 @@ Wall.prototype = {
         // this.display().add(new O3.RenderObject(cube).at(0, 0, this.wall_z));
 
         this.display().renderer().shadowMapEnabled = true;
+        this.display().renderer().shadowMapType = THREE.PCFSoftShadowMap;
         this.init_windows();
     },
 
@@ -763,37 +764,51 @@ Wall.prototype = {
         this.BOTTOM_MARGIN = _p(this.margin.h, 2, this.STORY_HEIGHT);
         this.REAL_HEIGHT = this.height() - (this.TOP_MARGIN + this.BOTTOM_MARGIN);
         this.REAL_STORY_HEIGHT = this.REAL_HEIGHT / this.stories; // the height of each story, adjusted for margins.
+        this.STORY_HEIGHT = this.height() / this.stories; // the height of each story, adjusted for margins.
 
         this.WINDOW_TOP = _p(this.window_sizes.h, 0, this.REAL_STORY_HEIGHT);
         this.WINDOW_BOTTOM = _p(this.window_sizes.h, 2, this.REAL_STORY_HEIGHT);
-        this.WINDOW_HEIGHT = _p(this.window_sizes.h, 1, this.REAL_STORY_HEIGHT);
+        this.WINDOW_HEIGHT = this.height() / this.stories; //_p(this.window_sizes.h, 1, this.REAL_STORY_HEIGHT);
         this.WINDOW_WIDTH = this.size / this.windows();
         this.WINDOW_LEFT_MARGIN = _p(this.margin.h, 0, this.WINDOW_WIDTH);
         this.WINDOW_RIGHT_MARGIN = _p(this.margin.h, 2, this.WINDOW_WIDTH);
         this.REAL_WINDOW_WIDTH = (this.size - (this.WINDOW_LEFT_MARGIN + this.WINDOW_RIGHT_MARGIN)); // the width of the entire bank of windows
         this.REAL_EACH_WINDOW_WIDTH = this.REAL_WINDOW_WIDTH / this.windows();
+        this.INNER_WINDOW_WIDTH = _p(this.window_frame.h_proportions, 1, this.REAL_EACH_WINDOW_WIDTH);
+        this.INNER_WINDOW_HEIGHT = _p(this.window_frame.v_proportions, 1, this.STORY_HEIGHT);
+        this.WINDOW_Y_OFFSET = _p(this.window_frame.v_proportions, 2, this.STORY_HEIGHT) - _p(this.window_frame.v_proportions, 0, this.STORY_HEIGHT);
 
+        console.log('left edge of building: ', this.size / -2, 'to', this.size / 2);
+        Fools.loop(function (iterator) {
+            var center_x = (iterator.window + 0.5) * this.REAL_EACH_WINDOW_WIDTH; // left edge of window;
+            center_x += this.WINDOW_LEFT_MARGIN; // adjsted to margin
+            center_x -= this.size / 2; // adgusted to size of building
+            // center_x += this.REAL_EACH_WINDOW_WIDTH /2; // adjusted to center of window
 
-        Fools.loop(function(iterator){
-            var center_x = iterator.window * this.REAL_EACH_WINDOW_WIDTH; // left edge of window;
-            center_x -= this.WINDOW_LEFT_MARGIN - this.WINDOW_RIGHT_MARGIN; // adjsted to difference of margins -- typiclaly 0
-            center_x -= this.size/2; // adgusted to size of building
-            center_x += this.REAL_EACH_WINDOW_WIDTH /2; // adjusted to center of window
+            var center_y = iterator.story * this.STORY_HEIGHT + this.WINDOW_Y_OFFSET;
+            //   center_y -= this.WINDOW_TOP - this.WINDOW_BOTTOM;
+            center_y -= this.height() / 2; // adjusted to size of building
+            center_y += this.WINDOW_HEIGHT / 2; // adjuusted to center of window
 
-            var center_y = iterator.stories * this.REAL_STORY_HEIGHT;
-            center_y -= this.WINDOW_TOP - this.WINDOW_BOTTOM;
-            center_y -= this.height()/2; // adjusted to size of building
-            center_y += this.WINDOW_HEIGHT /2; // adjuusted to center of window
-
-            var window = new THREE.CubeGeometry(this.REAL_EACH_WINDOW_WIDTH, this.WINDOW_HEIGHT, 5);
+            var window = new THREE.CubeGeometry(this.INNER_WINDOW_WIDTH, this.INNER_WINDOW_HEIGHT, 20);
             var name = 'window_' + iterator.window + '_story_' + iterator.story;
-            if (Math.random() > this.window_color.lit_percent){
-                this.display().add(new O3.RenderObject(new THREE.Mesh(window, this.display().mat('window lit').obj()), {name: name}));
-            } else {
-                this.display().add(new O3.RenderObject(new THREE.Mesh(window, this.display().mat('window unlit').obj()), {name: name}));
-            }
+            var ro;
+            var mesh;
 
-        }.bind(this)).dim('story').min(0).max(this.stories).dim('window').min(0).max(this.windows())();
+            if (Math.random() > this.window_color.lit_percent) {
+                mesh = new THREE.Mesh(window, this.display().mat('window lit').obj());
+                ro = new O3.RenderObject(mesh, {name: name});
+            } else {
+                 mesh = new THREE.Mesh(window, this.display().mat('window unlit').obj());
+                ro = new O3.RenderObject(mesh, {name: name});
+            }
+            mesh.castShadow = true;
+
+            ro.at(center_x, center_y, this.wall_z);
+            console.log('window', iterator.window, 'of', this.windows(), 'x:', Math.round(center_x), '(', Math.round(center_x - this.REAL_EACH_WINDOW_WIDTH / 2), '..', Math.round(center_x + this.REAL_EACH_WINDOW_WIDTH / 2), ')', 'y: ', Math.round(center_y));
+            this.display().add(ro);
+
+        }.bind(this)).dim('window').min(0).max(this.windows() - 1).dim('story').min(0).max(this.stories)();
 
     },
 
@@ -812,12 +827,12 @@ Wall.prototype = {
 
         this.display().add(new O3.RenderObject(new THREE.HemisphereLight(this.sun_color, this.dusk_color, 1.25)));
 
-        var sun = new O3.RenderObject('sun light', {name: 'sun'}).at(-this.size / 4, this.size / 3, this.size / 1.25);
+        var sun = new O3.RenderObject('sun light', {name: 'sun'}).at(-this.size / 4, this.size / 2, - this.size);
         sun.obj().castShadow = true;
         var D = this.size * this.repeat / 1.5;
         _.extend(sun.obj(), {
             shadowCameraLeft: -D, intensity: 0.75, shadowCameraRight: D, shadowCameraTop: -D, shadowCameraBottom: D, shadowBias: -0.001,
-            castShadow: true, shadowCameraVisible: true, shadowMapWidth: 1024, shadowMapHeight: 1024});
+            castShadow: true, shadowCameraVisible: true, shadowMapWidth: 5 * 1024, shadowMapHeight: 5 * 1024});
         this.display().add(sun);
 
     },

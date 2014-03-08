@@ -88,7 +88,7 @@ City.prototype = {
             //console.log('tower: ', obj, 'mats:', mats);
             var mesh = new THREE.Mesh(obj, new THREE.MeshFaceMaterial(mats));
             mesh.scale.set(City.GRID_SIZE / 2, City.GRID_SIZE / 2, City.GRID_SIZE / 2);
-            // this.display().add(new O3.RenderObject(mesh, {name: 'tower'}));
+             this.display().ro().set_obj(mesh);
             self._tower = mesh;
         }.bind(this), '/img/');
 
@@ -184,15 +184,9 @@ City.prototype = {
                         var mesh;
                         _.each(cubes, function (cube) {
                             root.remove(cube);
-                            var tower = self.building();
-                            tower.position.set(cube.data.x * City.GRID_SIZE, Math.floor(Math.random() * 4) * -City.GRID_SIZE, cube.data.z * City.GRID_SIZE);
-                            if (mesh){
-                                
-                            } else {
-                                mesh = tower;
-                            }
-                            root.add(new O3.RenderObject(tower).at());
-
+                            var ro = new O3.RenderObject().set_obj(self._tower.clone());
+                            ro.at(cube.obj().position);
+                            root.add(ro);
                             root.update = _.identity;
                             root.update_on_animate = false;
                             root.merged = true;

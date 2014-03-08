@@ -100,7 +100,7 @@ City.prototype = {
             //console.log('tower: ', obj, 'mats:', mats);
             var mesh = new THREE.Mesh(obj, new THREE.MeshFaceMaterial(mats));
             mesh.scale.set(City.GRID_SIZE / 2, City.GRID_SIZE / 2, City.GRID_SIZE / 2);
-            // this.display().add(new O3.RenderObject(mesh, {name: 'tower'}));
+             this.display().ro().set_obj(mesh);
             self._tower = mesh;
         }.bind(this), '/img/');
 
@@ -196,15 +196,9 @@ City.prototype = {
                         var mesh;
                         _.each(cubes, function (cube) {
                             root.remove(cube);
-                            var tower = self.building();
-                            tower.position.set(cube.data.x * City.GRID_SIZE, Math.floor(Math.random() * 4) * -City.GRID_SIZE, cube.data.z * City.GRID_SIZE);
-                            if (mesh){
-                                
-                            } else {
-                                mesh = tower;
-                            }
-                            root.add(new O3.RenderObject(tower).at());
-
+                            var ro = new O3.RenderObject().set_obj(self._tower.clone());
+                            ro.at(cube.obj().position);
+                            root.add(ro);
                             root.update = _.identity;
                             root.update_on_animate = false;
                             root.merged = true;
@@ -279,78 +273,10 @@ Building.prototype = {
         var tower = structure.clone();
         tower.receiveShadow = true;
         tower.castShadow = true;
-        /*
-         var front_map = this._frontMaterial().map;
-
-         _.each(tower.material.materials, function(mat){
-         if(mat.name == 'front'){
-         mat.map = front_map;
-         }
-         });*/
-        tower.material = this._material(); //[1].needsUpdate = true;
 
         return tower;
 
-    },
-
-    _material: function () {
-
-        if (!this.__material) {
-            this.__material = new THREE.MeshFaceMaterial(
-              [this._backMaterial(),   this._frontMaterial(), this._leftMaterial(), this._rightMaterial(), this._topMaterial()]
-            );
-            this.__material.needsUpdate = true;
-        }
-
-        return this.__material;
-    },
-
-    _frontMaterial: function () {
-        if (!this.__frontMaterial) {
-
-            if (this.frontTexture.tagName == 'CANVAS') {
-                var t = this.frontTexture;
-                this.frontTexture = document.createElement('img');
-                this.frontTexture.src = t.toDataURL();
-            }
-            //  var texture = THREE.ImageUtils.loadTexture('/img/city.png');
-            var texture = new THREE.Texture(this.frontTexture);
-            texture.needsUpdate = true;
-            // texture.repeat.set(1, 6);
-            texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
-            this.__frontMaterial = new THREE.MeshLambertMaterial({map: texture});
-        }
-        return this.__frontMaterial;
-    },
-
-    _leftMaterial: function () {
-        if (!this.__leftMaterial) {
-            this.__leftMaterial = new THREE.MeshLambertMaterial({color: O3.util.rgb.apply(O3.util, this.leftTexture)});
-        }
-        return this.__leftMaterial;
-    },
-
-    _backMaterial: function () {
-        if (!this.__backMaterial) {
-            this.__backMaterial = new THREE.MeshLambertMaterial({color: O3.util.rgb.apply(O3.util, this.backTexture)});
-        }
-        return this.__backMaterial;
-    },
-
-    _rightMaterial: function () {
-        if (!this.__rightMaterial) {
-            this.__rightMaterial = new THREE.MeshLambertMaterial({color: O3.util.rgb.apply(O3.util, this.rightTexture)});
-        }
-        return this.__rightMaterial;
-    },
-
-
-    _topMaterial: function () {
-        if (!this.__topMaterial) {
-            this.__topMaterial = new THREE.MeshLambertMaterial({color: O3.util.rgb.apply(O3.util, this.topTexture)});
-        }
-        return this.__topMaterial;
-    },
+    }
 
 };
 var TEXTURES = {roads: {}};
@@ -755,6 +681,33 @@ Wall.prototype = {
         this.display().renderer().shadowMapEnabled = true;
         this.display().renderer().shadowMapType = THREE.PCFSoftShadowMap;
         this.init_windows();
+        this.init_PP();
+    },
+
+    init_PP: function(){
+
+        // depth
+
+        var depthShader = THREE.ShaderLib[ "depthRGBA" ];
+        var depthUniforms = THREE.UniformsUtils.clone( depthShader.uniforms );
+
+        var depthMaterial = new THREE.ShaderMaterial( { fragmentShader: depthShader.fragmentShader, vertexShader: depthShader.vertexShader, uniforms: depthUniforms } );
+         depthMaterial.blending = THREE.NoBlending;
+
+        // postprocessing
+
+        var composer = new THREE.EffectComposer( this.display().renderer() );
+        composer.addPass( new THREE.RenderPass( this.display().scene(), this.display().camera() ) );
+
+        var depthTarget = new THREE.WebGLRenderTarget( this.size, this.height(), { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
+
+        var effect = new THREE.ShaderPass( THREE.SSAOShader );
+        effect.uniforms[ 'tDepth' ].value = depthTarget;
+        effect.uniforms[ 'size' ].value.set( window.innerWidth, window.innerHeight );
+        effect.uniforms[ 'cameraNear' ].value = camera.near;
+        effect.uniforms[ 'cameraFar' ].value = camera.far;
+        effect.renderToScreen = true;
+        composer.addPass( effect );
     },
 
     init_windows: function () {

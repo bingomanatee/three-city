@@ -119,7 +119,7 @@ Wall.prototype = {
         var depthUniforms = THREE.UniformsUtils.clone( depthShader.uniforms );
 
         var depthMaterial = new THREE.ShaderMaterial( { fragmentShader: depthShader.fragmentShader, vertexShader: depthShader.vertexShader, uniforms: depthUniforms } );
-        var depthMaterial.blending = THREE.NoBlending;
+         depthMaterial.blending = THREE.NoBlending;
 
         // postprocessing
 

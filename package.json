@@ -30,7 +30,7 @@
     "node-easel": "~0.1.2",
     "fools": "0.0.5-a",
     "canvas": "~1.1.3",
-    "objective-three": "0.0.1-b",
+    "objective-three": "0.0.2-b",
     "lodash": "~2.4.1"
   }
 }

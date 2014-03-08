@@ -42,3 +42,4 @@ slice.processCell = function (inner, column, row) {
 };
 
 slice.draw();
+slice.parent.style.display = 'none';

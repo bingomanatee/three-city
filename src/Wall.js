@@ -117,7 +117,7 @@ Wall.prototype = {
         this.display().renderer().shadowMapEnabled = true;
         this.display().renderer().shadowMapType = THREE.PCFSoftShadowMap;
         this.init_windows();
-        this.init_PP();
+       // this.init_PP();
     },
 
     init_PP: function () {
@@ -344,7 +344,7 @@ Wall.prototype = {
 
     init_lights: function () {
 
-        this.display().add(new O3.RenderObject(new THREE.HemisphereLight(this.sun_color, this.dusk_color, 1.25)));
+       this.display().add(new O3.RenderObject(new THREE.HemisphereLight(this.sun_color, this.dusk_color, 1.25)).at(0,0,1));
         var D = this.size * this.repeat / 1.5;
 
         var X_NUM = 2;
@@ -353,8 +353,8 @@ Wall.prototype = {
         var X_RANGE = 1 + X_NUM * 2;
         var Y_RANGE = 1 + Y_NUM * 2;
         var SUN_CONFIG = {
-            intensity: 1 / (X_RANGE * Y_RANGE * 2),
-            shadowMapFar: D * 2,
+
+            shadowMapFar: this.size * 4,
             shadowCameraLeft: -D, shadowCameraRight: D,
             shadowCameraTop: -D, shadowCameraBottom: D,
             shadowMapWidth: 1 * 1024, shadowMapHeight: 1 * 1024,
@@ -364,20 +364,26 @@ Wall.prototype = {
         };
 
         Fools.loop(function (iter) {
-            this.display().light('sun')
-                .at(iter.x * this.width() / (X_RANGE * 2), iter.y * this.width() / (Y_RANGE * 2), -this.size)
-                .set(SUN_CONFIG);
-        }.bind(this)).dim('x').min(-X_NUM).max(X_NUM).dim('y').min(-Y_NUM + 1).max(Y_NUM + 1)();
+           // if (iter.x || iter.y){
+               var light = this.display().light('sun')
+                    .at(iter.x * this.width() / (8 * X_RANGE), iter.y * this.width() / (8 * Y_RANGE), this.size);
+            light.obj().color.set(1,1,1);
+                    light.set(SUN_CONFIG);
+          //  }
+        }.bind(this)).dim('x').min(-X_NUM).max(X_NUM).dim('y').min(-Y_NUM + 1).max( Y_NUM + 1)();
     },
 
     init_wall: function () {
-        var w = new THREE.PlaneGeometry(this.size * 1.05, this.size * this.repeat * 1.02, 10, 10);
-        this.display().mat('wall_color', {color: this.color, type: 'MeshBasicMaterial'});
-        var wall_ro = this.display().ro().mat('wall_color').geo(w).mat('wall_color').n('wall_base');
+        var w = new THREE.PlaneGeometry(this.width() * 1.05, this.height() * 1.02);
+        this.display().mat('wall_color', {color: this.color, type: 'MeshPhongMaterial'});
+        var wall_ro = this.display().ro().geo(w).mat('wall_color').n('wall');
         var wall_base = new O3.RenderObject(null, {name: 'wall_base'}).at(0, 0, this.wall_z);
         wall_ro.set('receiveShadow', true);
         wall_base.add(wall_ro);
         this.display().add(wall_base);
+        var ro = this.display().ro().geo(new THREE.CylinderGeometry(this.size/20, this.size/20, this.height(), 24)).mat('wall_color').at(-this.size/8,0,0);
+        ro.set('receiveShadow', true);
+        ro.set('castShadow', true);
     }
 
 };

@@ -702,29 +702,47 @@ Wall.prototype = {
     },
 
     init_PP: function () {
-        /*
-         // depth
+        return;
 
-         var depthShader = THREE.ShaderLib[ "depthRGBA" ];
-         var depthUniforms = THREE.UniformsUtils.clone( depthShader.uniforms );
+        var camera = this.display().camera();
+        var renderer = this.display().renderer();
+        // depth
 
-         var depthMaterial = new THREE.ShaderMaterial( { fragmentShader: depthShader.fragmentShader, vertexShader: depthShader.vertexShader, uniforms: depthUniforms } );
-         depthMaterial.blending = THREE.NoBlending;
+        var depthShader = THREE.ShaderLib[ "depthRGBA" ];
+        var depthUniforms = THREE.UniformsUtils.clone(depthShader.uniforms);
 
-         // postprocessing
+        var depthMaterial = new THREE.ShaderMaterial({ fragmentShader: depthShader.fragmentShader, vertexShader: depthShader.vertexShader, uniforms: depthUniforms });
+        depthMaterial.blending = THREE.NoBlending;
 
-         var composer = new THREE.EffectComposer( this.display().renderer() );
-         composer.addPass( new THREE.RenderPass( this.display().scene(), this.display().camera() ) );
+        // postprocessing
 
-         var depthTarget = new THREE.WebGLRenderTarget( this.size, this.height(), { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat } );
+        var composer = new THREE.EffectComposer(renderer);
+        composer.addPass(new THREE.RenderPass(this.display().scene(), camera));
 
-         var effect = new THREE.ShaderPass( THREE.SSAOShader );
-         effect.uniforms[ 'tDepth' ].value = depthTarget;
-         effect.uniforms[ 'size' ].value.set( window.innerWidth, window.innerHeight );
-         effect.uniforms[ 'cameraNear' ].value = camera.near;
-         effect.uniforms[ 'cameraFar' ].value = camera.far;
-         effect.renderToScreen = true;
-         composer.addPass( effect );*/
+        var depthTarget = new THREE.WebGLRenderTarget(this.size, this.height(), { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat });
+
+        var effect = new THREE.ShaderPass(THREE.SSAOShader);
+        effect.uniforms[ 'tDepth' ].value = depthTarget;
+        effect.uniforms[ 'size' ].value.set(this.width() /2, this.height() /2);
+        effect.uniforms[ 'cameraNear' ].value = -200;
+        effect.uniforms[ 'cameraFar' ].value = 200;
+       // effect.uniforms[ 'aoClamp' ].value = 0.5;
+        effect.uniforms[ "lumInfluence"].value = 0.9;
+        effect.material.defines = { "RGBA_DEPTH": true, "ONLY_AO_COLOR": "1.0, 0.7, 0.5" };
+        effect.uniforms.onlyAO.value = 0;
+        effect.renderToScreen = true;
+        composer.addPass(effect);
+        var effectFXAA = new THREE.ShaderPass( THREE.FXAAShader );
+    //    effectFXAA.uniforms[ 'resolution' ].value.set( 2 / ( this.width() ), 2 / ( this.height() ) );
+
+       composer.addPass(effectFXAA);
+
+        var depthPassPlugin = new THREE.DepthPassPlugin();
+        depthPassPlugin.renderTarget = depthTarget;
+
+        renderer.addPrePlugin( depthPassPlugin );
+
+        this.composer = composer;
     },
 
     init_windows: function () {
@@ -744,6 +762,8 @@ Wall.prototype = {
                 height: iter.height,
                 anchor: anchor,
                 level: 1,
+                depth: 20,
+                visible: true,
                 next: function (window_iter) {
                     if ((window_iter.row == 1) && !(window_iter.col % 2)) {
                         self._draw_box(window_iter);
@@ -877,7 +897,7 @@ Wall.prototype = {
         if (box_iter.hasOwnProperty('visible') && (!box_iter.visible)) {
             panel = new THREE.CubeGeometry(0.0001, 0.0001, 0.0001);
         } else {
-            panel = new THREE.CubeGeometry(box_iter.width, box_iter.height, 20);
+            panel = new THREE.CubeGeometry(box_iter.width, box_iter.height, box_iter.depth || 5);
         }
         var mat = new THREE.MeshBasicMaterial({color: box_iter.make_color(box_iter)});
         console.log('mat: ', mat);
@@ -885,11 +905,6 @@ Wall.prototype = {
             .at(x, y, 0)
             .mat(mat);
 
-        if (box_iter.hasOwnProperty('visible')) {
-            ro.set('visible', box_iter.visible);
-        } else {
-            debugger;
-        }
         if (box_iter.anchor) {
             box_iter.anchor.add(ro);
         }
@@ -913,7 +928,7 @@ Wall.prototype = {
         this.display().add(new O3.RenderObject(new THREE.HemisphereLight(this.sun_color, this.dusk_color, 1.25)));
         var D = this.size * this.repeat / 1.5;
 
-        var X_NUM = 1;
+        var X_NUM = 2;
         var Y_NUM = 1;
 
         var X_RANGE = 1 + X_NUM * 2;
@@ -923,17 +938,17 @@ Wall.prototype = {
             shadowMapFar: D * 2,
             shadowCameraLeft: -D, shadowCameraRight: D,
             shadowCameraTop: -D, shadowCameraBottom: D,
-            shadowMapWidth: 2 * 1024, shadowMapHeight: 2 * 1024,
-            shadowBias: -0.001,
-            castShadow: true, shadowCameraVisible: true,
-            shadowDarkness: 0.25
+            shadowMapWidth: 1 * 1024, shadowMapHeight: 1 * 1024,
+            shadowBias: -0.0002,
+            castShadow: 1, shadowCameraVisible: 0,
+            shadowDarkness: 0.06
         };
 
         Fools.loop(function (iter) {
             this.display().light('sun')
-                .at(iter.x * this.size / (X_RANGE * 2), iter.y * this.size / (Y_RANGE * 2), -this.size)
+                .at(iter.x * this.width() / (X_RANGE * 2), iter.y * this.width() / (Y_RANGE * 2), -this.size)
                 .set(SUN_CONFIG);
-        }.bind(this)).dim('x').min(-X_NUM).max(X_NUM).dim('y').min(-Y_NUM + 0.5).max(Y_NUM + 0.5)();
+        }.bind(this)).dim('x').min(-X_NUM).max(X_NUM).dim('y').min(-Y_NUM + 1).max(Y_NUM + 1)();
     },
 
     init_wall: function () {

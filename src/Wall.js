@@ -11,13 +11,13 @@ function Wall(params) {
     this.dusk_color = new THREE.Color(.3, 0.2, .15, 25);
 
     this.window_sizes = {
-        v: [0, 5, 0], // the window heights relative to a stage.
-        h: [4, 1, 4, 8, 4] // the width divisions of the window bank
+        v: [1, 5, 1], // the window heights relative to a story.
+        h: [4, 1, 4, 8, 4, 1, 4, 8, 4] // the width divisions of the window bank
     };
 
     this.margin = {
-        h: [1, 4, 5], // relative to the entire banks of windows, the left and right margins.
-        v: [2, 4, 2]    // relative to a single story: top height margin, story height, bottom margin (typically 0).
+        h: [1, 20, 1], // relative to the entire banks of windows, the left and right margins.
+        v: [3, 50, 1]    // relative to a single story: top height margin, story height, bottom margin (typically 0).
     };
 
     this.window_frame = {
@@ -153,6 +153,33 @@ Wall.prototype = {
 
         var self = this;
 
+        var windows = function (iter) {
+            var anchor = self.display().ro().at(-iter.width / 2, iter.height / 2, 0);
+            iter.ro.add(anchor);
+            var params = {
+                v: self.window_sizes.v,
+                h: self.window_sizes.h,
+                width: iter.width,
+                height: iter.height,
+                anchor: anchor,
+                level: 1,
+                next: function (window_iter) {
+                    if ((window_iter.row == 1) && !(window_iter.col % 2)) {
+                        self._draw_box(window_iter);
+                        window_iter.ro.set('castShadow', true);
+                        window_iter.ro.set('receiveShadow', false);
+                    }
+                },
+
+                make_color: function () {
+                    return new THREE.Color(1, 1, 0.8)
+                }
+
+            };
+
+            self.add_box(params);
+        };
+
         var next = function (box_iter) {
 
             console.log('inner bi: ', box_iter);
@@ -164,17 +191,19 @@ Wall.prototype = {
                 var params = {
                     width: box_iter.width,
                     height: box_iter.height,
-                    v: _.map(_.range(0, self.stories), function(){return 1}),
+                    v: _.map(_.range(0, self.stories), function () {
+                        return 1
+                    }),
                     h: [1],
                     anchor: anchor,
-                    level: 2,
+                    level: 1,
+                    visible: false,
                     make_color: function (iter_params) {
                         var ch = (iter_params.row + iter_params.col) % 2;
                         return new THREE.Color(ch, ch, ch);
                     },
-                    next: self._draw_box.bind(self)
+                    next: Fools.pipe().add(self._draw_box.bind(self)).add(windows)
                 };
-                debugger;
                 self.add_box(params);
             }
         };
@@ -188,6 +217,7 @@ Wall.prototype = {
             width: this.width(),
             height: this.height(),
             level: 1,
+            visible: false,
             make_color: function (iter_params) {
                 if (!window.CN) {
                     window.CN = 1;
@@ -261,13 +291,24 @@ Wall.prototype = {
             'l/r:', Math.round(box_iter.left), Math.round(box_iter.right),
             't/b:', Math.round(box_iter.top), Math.round(box_iter.bottom));
 
-        var panel = new THREE.PlaneGeometry(box_iter.width, box_iter.height);
+        var panel;
+
+        if (box_iter.hasOwnProperty('visible') && (!box_iter.visible)) {
+            panel = new THREE.CubeGeometry(0.0001, 0.0001, 0.0001);
+        } else {
+            panel = new THREE.CubeGeometry(box_iter.width, box_iter.height, 20);
+        }
         var mat = new THREE.MeshBasicMaterial({color: box_iter.make_color(box_iter)});
         console.log('mat: ', mat);
         var ro = this.display().ro().geo(panel)
-            .at(x, y, 20 * box_iter.level + this.wall_z)
+            .at(x, y, 0)
             .mat(mat);
 
+        if (box_iter.hasOwnProperty('visible')) {
+            ro.set('visible', box_iter.visible);
+        } else {
+            debugger;
+        }
         if (box_iter.anchor) {
             box_iter.anchor.add(ro);
         }

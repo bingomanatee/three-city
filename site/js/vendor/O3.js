@@ -574,6 +574,7 @@ _.extend(
 
         light: function(type, name){
             var ro = new RenderObject().light(type);
+            this.add(ro);
             return name ? ro.n(name) : ro;
         },
 
@@ -610,15 +611,6 @@ _.extend(
                     update = a;
                 }
             });
-
-            if (mesh) {
-                if (geo) {
-                    mesh.setGeometry(geo);
-                }
-                if (mat) {
-                    mesh.setMaterial(mat);
-                }
-            }
 
             mesh = mesh || light || new THREE.Mesh(geo, mat);
 
@@ -1023,7 +1015,11 @@ _.extend(
             }
 
             if ((this.obj() instanceof THREE.Mesh)) {
-                this.obj().setMaterial(mat);
+                if (this.obj().setMaterial){
+                    this.obj().setMaterial(mat);
+                } else {
+                    this.obj().material = mat;
+                }
             }
 
             return this;
@@ -1040,7 +1036,12 @@ _.extend(
                 return this.obj()instanceof  THREE.Mesh ? this.obj().geometry : false;
             }
             if (this.obj() instanceof THREE.Mesh) {
-                this.obj().setGeometry(geo);
+                if (this.obj.setGeometry){
+                    this.obj().setGeometry(geo);
+                } else {
+                    this.obj().geometry = geo;
+                    this.obj().updateMorphTargets();
+                }
             }
             return this;
         },

@@ -27,15 +27,21 @@ City.prototype = {
 
             var D = 64 * this.extent;
             //    console.log('map size: ', D);
-            var light = _.extend(new THREE.DirectionalLight(), {
+/*            var light = _.extend(new THREE.DirectionalLight(), {
                 shadowCameraLeft: -D, shadowCameraRight: D, shadowCameraTop: -D, shadowCameraBottom: D, shadowBias: -0.001,
                 castShadow: true, shadowCameraVisible: true, shadowMapWidth: 1024 * 8, shadowMapHeight: 1024 * 8});
             light.scale.set(2, 2, 2);
             var sun_light = new O3.RenderObject(light, function () {
 
             });
+ */
 
-            var sun = new O3.RenderObject(null).at(0, City.GRID_SIZE * 4, 0);
+            var sun = new O3.RenderObject().at(0, City.GRID_SIZE * 4, 0);
+
+            var sun_light = this._display.light('sun');
+        sun_light.set({
+                shadowCameraLeft: -D, shadowCameraRight: D, shadowCameraTop: -D, shadowCameraBottom: D, shadowBias: -0.001,
+                castShadow: true, shadowCameraVisible: true, shadowMapWidth: 1024 * 8, shadowMapHeight: 1024 * 8});
             sun.add(sun_light);
             sun.at(City.GRID_SIZE * -4, City.GRID_SIZE * 16, City.GRID_SIZE * 6);
             this._display.add(sun);
@@ -87,6 +93,8 @@ City.prototype = {
         loader.load('/3d/tower2.js', function (obj, mats) {
             //console.log('tower: ', obj, 'mats:', mats);
             var mesh = new THREE.Mesh(obj, new THREE.MeshFaceMaterial(mats));
+            mesh.castShadow = true;
+           mesh.receiveShadow = true;
             mesh.scale.set(City.GRID_SIZE / 2, City.GRID_SIZE / 2, City.GRID_SIZE / 2);
              this.display().ro().set_obj(mesh);
             self._tower = mesh;

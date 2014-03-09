@@ -21250,12 +21250,6 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	function getBufferMaterial( object, geometryGroup ) {
 
-        if (object.material instanceof THREE.MeshFaceMaterial){
-            if (!object.material.materials[ geometryGroup.materialIndex ]){
-                throw new Error('bad index');
-            }
-        }
-
 		return object.material instanceof THREE.MeshFaceMaterial
 			? object.material.materials[ geometryGroup.materialIndex ]
 			: object.material;

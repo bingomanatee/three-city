@@ -733,8 +733,8 @@ Wall.prototype = {
                 var params = {
                     width: box_iter.width,
                     height: box_iter.height,
-                    h: [1, 1, 1],
-                    v: [1, 1, 1],
+                    v: _.map(_.range(0, self.stories), function(){return 1}),
+                    h: [1],
                     anchor: anchor,
                     level: 2,
                     make_color: function (iter_params) {
@@ -755,7 +755,7 @@ Wall.prototype = {
             h: this.margin.h,
             v: this.margin.v,
             width: this.width(),
-            height: this.height() / 2,
+            height: this.height(),
             level: 1,
             make_color: function (iter_params) {
                 if (!window.CN) {
@@ -800,19 +800,6 @@ Wall.prototype = {
             var top = _ps(params.v, iter.row, params.height) - params.height;
             var bottom = _ps(params.v, iter.row + 1, params.height) - params.height;
             var height = bottom - top;
-            /*
-             var cd = this._lerp3(params.colors[0], params.colors[1], iter.col / 2);
-
-             var ch = this._lerp3(params.colors[0], params.colors[2], iter.row / 2);
-
-             var c = new THREE.Color((cd[0] + ch[0]) / 2, (cd[1] + ch[1]) / 2, (cd[2] + ch[2]) / 2);*/
-            /*
-             console.log('col: ', iter.col, 'row: ', iter.row,
-             'x:', Math.round(x), 'y:', Math.round(y),
-             'w:', Math.round(width), 'h:', Math.round(height),
-             'l/r:', Math.round(left), Math.round(right),
-             't/b:', Math.round(top), Math.round(bottom),
-             'color:', c.getStyle());*/
 
             return _.defaults({
                 left: left,
@@ -829,7 +816,7 @@ Wall.prototype = {
 
         }
 
-        Fools.loop(handler).dim('col').min(0).max(2).dim('row').min(0).max(2)();
+        Fools.loop(handler).dim('col').min(0).max(params.h.length).dim('row').min(0).max(params.v.length)();
 
     },
 

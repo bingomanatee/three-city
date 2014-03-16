@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Three-city:Buildings</title>
+    <link rel='stylesheet' href='/stylesheets/style.css' />
+  </head>
+  <body>
+    <h1><a href="/">Home</a>: Buildings</h1>
+    <p>our Buildings</p>
+
+  <ul>
+      <% buildings.forEach(function(b){ %>
+      <li>
+          <%= b.name %>
+      </li>
+      <% }) %>
+  </ul>
+
+  <h2>Add a building</h2>
+
+  <form method="post" action="/building">
+
+      <p><label>Name</label>
+      <input type="text" name="name" />
+      </p>
+
+      <p><button type="submit">Save</button></p>
+  </form>
+  </body>
+</html>

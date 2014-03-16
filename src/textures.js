@@ -10,19 +10,19 @@ _.each(
         },
         {
             type: '-',
-            name: 'img/road-.png',
+            name: '/img/road-.png',
             repeat: [1, 1],
             offset: [0.0]
         },
         {
             type: '|',
-            name: 'img/roadl.png',
+            name: '/img/roadl.png',
             repeat: [1, 1],
             offset: [0.0]
         },
         {
             type: '.',
-            name: 'img/roads.png',
+            name: '/img/roads.png',
             repeat: [1, 1],
             offset: [0.0]
         }

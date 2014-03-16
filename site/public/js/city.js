@@ -299,19 +299,19 @@ _.each(
         },
         {
             type: '-',
-            name: 'img/road-.png',
+            name: '/img/road-.png',
             repeat: [1, 1],
             offset: [0.0]
         },
         {
             type: '|',
-            name: 'img/roadl.png',
+            name: '/img/roadl.png',
             repeat: [1, 1],
             offset: [0.0]
         },
         {
             type: '.',
-            name: 'img/roads.png',
+            name: '/img/roads.png',
             repeat: [1, 1],
             offset: [0.0]
         }
@@ -695,10 +695,26 @@ Wall.prototype = {
         var cube = new THREE.Mesh(new THREE.CubeGeometry(this.size / 8, this.size / 8, this.size / 8), new THREE.MeshLambertMaterial({color: O3.util.rgb(0.8, 0.8, 0.8)}));
         cube.castShadow = true;
 
-        this.display().renderer().shadowMapEnabled = true;
-        this.display().renderer().shadowMapType = THREE.PCFSoftShadowMap;
+        this.init_renderer();
+
         this.init_windows();
-       // this.init_PP();
+        // this.init_PP();
+    },
+
+    init_renderer: function () {
+
+        var params = {
+            shadowMapEnabled: true,
+            shadowMapType: THREE.PCFSoftShadowMap
+        };
+
+        if(this.canvas){
+            this.canvas.width = this.width();
+            this.canvas.height = this.hieght();
+            params.canvas = this.canvas;
+        }
+
+        this.display().renderer(new THREE.WebGLRenderer(params).setSize(this.width(), this.height()));
     },
 
     init_PP: function () {
@@ -723,24 +739,24 @@ Wall.prototype = {
 
         var effect = new THREE.ShaderPass(THREE.SSAOShader);
         effect.uniforms[ 'tDepth' ].value = depthTarget;
-        effect.uniforms[ 'size' ].value.set(this.width() /2, this.height() /2);
+        effect.uniforms[ 'size' ].value.set(this.width() / 2, this.height() / 2);
         effect.uniforms[ 'cameraNear' ].value = -200;
         effect.uniforms[ 'cameraFar' ].value = 200;
-       // effect.uniforms[ 'aoClamp' ].value = 0.5;
+        // effect.uniforms[ 'aoClamp' ].value = 0.5;
         effect.uniforms[ "lumInfluence"].value = 0.9;
         effect.material.defines = { "RGBA_DEPTH": true, "ONLY_AO_COLOR": "1.0, 0.7, 0.5" };
         effect.uniforms.onlyAO.value = 0;
         effect.renderToScreen = true;
         composer.addPass(effect);
-        var effectFXAA = new THREE.ShaderPass( THREE.FXAAShader );
-    //    effectFXAA.uniforms[ 'resolution' ].value.set( 2 / ( this.width() ), 2 / ( this.height() ) );
+        var effectFXAA = new THREE.ShaderPass(THREE.FXAAShader);
+        //    effectFXAA.uniforms[ 'resolution' ].value.set( 2 / ( this.width() ), 2 / ( this.height() ) );
 
-       composer.addPass(effectFXAA);
+        composer.addPass(effectFXAA);
 
         var depthPassPlugin = new THREE.DepthPassPlugin();
         depthPassPlugin.renderTarget = depthTarget;
 
-        renderer.addPrePlugin( depthPassPlugin );
+        renderer.addPrePlugin(depthPassPlugin);
 
         this.composer = composer;
     },
@@ -778,7 +794,7 @@ Wall.prototype = {
 
             };
 
-            self.add_box(params);
+            self.grid_loop(params);
         };
 
         var next = function (box_iter) {
@@ -805,13 +821,13 @@ Wall.prototype = {
                     },
                     next: Fools.pipe().add(self._draw_box.bind(self)).add(windows)
                 };
-                self.add_box(params);
+                self.grid_loop(params);
             }
         };
 
         var next_pipe = Fools.pipe().add(this._draw_box.bind(this)).add(next);
 
-        this.add_box({
+        this.grid_loop({
             anchor: this.ul_anchor,
             h: this.margin.h,
             v: this.margin.v,
@@ -851,7 +867,7 @@ Wall.prototype = {
         ];
     },
 
-    add_box: function (params) {
+    grid_loop: function (params) {
 
         var handler = function (iter) {
             // if (iter.col != 1) return;
@@ -925,7 +941,7 @@ Wall.prototype = {
 
     init_lights: function () {
 
-       this.display().add(new O3.RenderObject(new THREE.HemisphereLight(this.sun_color, this.dusk_color, 1.25)).at(0,0,1));
+        this.display().add(new O3.RenderObject(new THREE.HemisphereLight(this.sun_color, this.dusk_color, 1.25)).at(0, 0, 1));
         var D = this.size * this.repeat / 1.5;
 
         var X_NUM = 2;
@@ -945,13 +961,13 @@ Wall.prototype = {
         };
 
         Fools.loop(function (iter) {
-           // if (iter.x || iter.y){
-               var light = this.display().light('sun')
-                    .at(iter.x * this.width() / (8 * X_RANGE), iter.y * this.width() / (8 * Y_RANGE), this.size);
-            light.obj().color.set(1,1,1);
-                    light.set(SUN_CONFIG);
-          //  }
-        }.bind(this)).dim('x').min(-X_NUM).max(X_NUM).dim('y').min(-Y_NUM + 1).max( Y_NUM + 1)();
+            // if (iter.x || iter.y){
+            var light = this.display().light('sun')
+                .at(iter.x * this.width() / (8 * X_RANGE), iter.y * this.width() / (8 * Y_RANGE), this.size);
+            light.obj().color.set(1, 1, 1);
+            light.set(SUN_CONFIG);
+            //  }
+        }.bind(this)).dim('x').min(-X_NUM).max(X_NUM).dim('y').min(-Y_NUM + 1).max(Y_NUM + 1)();
     },
 
     init_wall: function () {
@@ -962,7 +978,7 @@ Wall.prototype = {
         wall_ro.set('receiveShadow', true);
         wall_base.add(wall_ro);
         this.display().add(wall_base);
-        var ro = this.display().ro().geo(new THREE.CylinderGeometry(this.size/20, this.size/20, this.height(), 24)).mat('wall_color').at(-this.size/8,0,0);
+        var ro = this.display().ro().geo(new THREE.CylinderGeometry(this.size / 20, this.size / 20, this.height(), 120)).mat('wall_color').at(-this.size / 8, 0, 0);
         ro.set('receiveShadow', true);
         ro.set('castShadow', true);
     }

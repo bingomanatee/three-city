@@ -572,7 +572,7 @@ _.extend(
             return object;
         },
 
-        light: function(type, name){
+        light: function (type, name) {
             var ro = new RenderObject().light(type);
             this.add(ro);
             return name ? ro.n(name) : ro;
@@ -685,9 +685,11 @@ _.extend(
          */
         renderer: function (renderer) {
 
-            if (renderer || !this._renderer) {
-                this._renderer = renderer || new THREE.WebGLRenderer();
-                this.renderer().setSize(this.width(), this.height());
+            if (renderer) {
+                this.renderer = render;
+            } else if (!this._renderer) {
+                this._renderer = new THREE.WebGLRenderer();
+                this._renderer.setSize(this.width(), this.height());
             }
 
             return this._renderer;
@@ -731,7 +733,12 @@ _.extend(
         },
 
         append: function (parent) {
-            parent.appendChild(this.renderer().domElement);
+            var dom = this.renderer().domElement;
+
+            if (!dom) {
+                throw new Error('no domElement on renderer');
+            }
+            parent.appendChild(dom);
         },
 
         height: function (value, noEmit) {

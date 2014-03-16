@@ -24,7 +24,7 @@ module.exports = function (grunt) {
             main: {
                 files: [
                     // includes files within path
-                    {expand: true, src: 'city.js', dest: 'site/js/', filter: 'isFile'}
+                    {expand: true, src: 'city.js', dest: 'site/public/js/', filter: 'isFile'}
                 ]
             }
         }

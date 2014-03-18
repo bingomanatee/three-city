@@ -28,35 +28,44 @@ City.prototype = {
 
             var D = 64 * this.extent;
             //    console.log('map size: ', D);
-/*            var light = _.extend(new THREE.DirectionalLight(), {
-                shadowCameraLeft: -D, shadowCameraRight: D, shadowCameraTop: -D, shadowCameraBottom: D, shadowBias: -0.001,
-                castShadow: true, shadowCameraVisible: true, shadowMapWidth: 1024 * 8, shadowMapHeight: 1024 * 8});
-            light.scale.set(2, 2, 2);
-            var sun_light = new O3.RenderObject(light, function () {
+            /*            var light = _.extend(new THREE.DirectionalLight(), {
+             shadowCameraLeft: -D, shadowCameraRight: D, shadowCameraTop: -D, shadowCameraBottom: D, shadowBias: -0.001,
+             castShadow: true, shadowCameraVisible: true, shadowMapWidth: 1024 * 8, shadowMapHeight: 1024 * 8});
+             light.scale.set(2, 2, 2);
+             var sun_light = new O3.RenderObject(light, function () {
 
-            });
- */
+             });
+             */
+
 
             var sun = new O3.RenderObject().at(0, City.GRID_SIZE * 4, 0);
 
             var sun_light = this._display.light('sun');
-        sun_light.set({
+            sun_light.set({
                 shadowCameraLeft: -D, shadowCameraRight: D, shadowCameraTop: -D, shadowCameraBottom: D, shadowBias: -0.001,
-                castShadow: true, shadowCameraVisible: true, shadowMapWidth: 1024 * 8, shadowMapHeight: 1024 * 8});
+                castShadow:       true, shadowCameraVisible: true, shadowMapWidth: 1024 * 8, shadowMapHeight: 1024 * 8});
             sun.add(sun_light);
             sun.at(City.GRID_SIZE * -4, City.GRID_SIZE * 8, City.GRID_SIZE * 6);
             this._display.add(sun);
 
-          //  var hemi = new O3.RenderObject(new THREE.HemisphereLight(O3.util.rgb(0.5, 0.1, 0), O3.util.rgb(0.8, .75, 1), 0.125), {name: 'hemi-sky'});
-        //    this._display.add(hemi);
+            //  var hemi = new O3.RenderObject(new THREE.HemisphereLight(O3.util.rgb(0.5, 0.1, 0), O3.util.rgb(0.8, .75, 1), 0.125), {name: 'hemi-sky'});
+            //    this._display.add(hemi);
 
             var camera = this._display.camera();
+
+            // NOT how you do this ...
+            camera.backgroundColor = new THREE.Color(0.7, 0.6, 1);
+            // this is the right way
+            this._display.renderer().setClearColor(camera.backgroundColor);
+
+            this._display.scene().fog = new THREE.FogExp2(camera.backgroundColor, 0.00125 );
+
             var cam = this._display.add(new O3.RenderObject(null, {name: 'camera', update: function () {
                 this.obj().translateY(1);
             }})).at(City.GRID_SIZE * -4, City.GRID_SIZE * 6, City.GRID_SIZE * 6);
 
             cam.obj().add(camera);
-            cam.obj().rotateX(Math.PI / -3);
+            cam.obj().rotateX(Math.PI / -6);
             var sphere = new THREE.Mesh(new THREE.SphereGeometry(City.GRID_SIZE / 2), this._display.mat('white').obj());
             this._display.add(new O3.RenderObject(sphere));
             this.ground_tiles();
@@ -71,7 +80,7 @@ City.prototype = {
         this.building_types.push(new Building(n, f, s, t));
     },
 
-    building: function(){
+    building: function () {
         return _.sample(this.building_types).mesh(this._tower);
     },
 
@@ -95,9 +104,9 @@ City.prototype = {
             //console.log('tower: ', obj, 'mats:', mats);
             var mesh = new THREE.Mesh(obj, new THREE.MeshFaceMaterial(mats));
             mesh.castShadow = true;
-           mesh.receiveShadow = true;
+            mesh.receiveShadow = true;
             mesh.scale.set(City.GRID_SIZE / 2, City.GRID_SIZE / 2, City.GRID_SIZE / 2);
-             this.display().ro().set_obj(mesh);
+            this.display().ro().set_obj(mesh);
             self._tower = mesh;
         }.bind(this), this.img_root);
 
@@ -195,7 +204,7 @@ City.prototype = {
                             root.remove(cube);
                             var ro = new O3.RenderObject().set_obj(self._tower.clone());
 
-                            cube.obj().position.y -= City.GRID_SIZE * 6 * (20 - cube.data.height)/20;
+                            cube.obj().position.y -= City.GRID_SIZE * 6 * (20 - cube.data.height) / 20;
                             ro.at(cube.obj().position);
 
                             root.add(ro);
@@ -241,14 +250,18 @@ City.prototype = {
             case 'x':
 
                 start = range.x.min;
-                while (start % this.x_period) ++start;
+                while (start % this.x_period) {
+                    ++start;
+                }
                 return _.range(start, range.x.max + 1, this.x_period);
                 break;
 
             case 'z':
 
                 start = range.z.min;
-                while (start % this.z_period) ++start;
+                while (start % this.z_period) {
+                    ++start;
+                }
                 return _.range(start, range.z.max + 1, this.z_period);
                 break;
         }

@@ -54,7 +54,7 @@ City.prototype = {
             var camera = this._display.camera();
 
             // NOT how you do this ...
-            camera.backgroundColor = new THREE.Color(0.7, 0.6, 1);
+            camera.backgroundColor = new THREE.Color(0.9, 0.6, 0.3);
             // this is the right way
             this._display.renderer().setClearColor(camera.backgroundColor);
 

@@ -686,7 +686,7 @@ _.extend(
         renderer: function (renderer) {
 
             if (renderer) {
-                this.renderer = render;
+                this._renderer = renderer;
             } else if (!this._renderer) {
                 this._renderer = new THREE.WebGLRenderer();
                 this._renderer.setSize(this.width(), this.height());
@@ -787,10 +787,12 @@ _.extend(
         },
 
         /**
-         * render a single frame
+         *
+         * @param camera {Three.Camera} (optional)
+         * @param scene {Three.Scene} (optional)
          */
-        render: function () {
-            this.renderer().render(this.scene(), this.camera());
+        render: function (camera, scene) {
+            this.renderer().render(scene || this.scene(), camera || this.camera());
         },
 
         /**
@@ -1092,6 +1094,7 @@ _.extend(
             } else if (key && _.isString(key)) {
                 this.obj()[key] = value;
             }
+            return this;
         },
 
         _cascade: function (event, data) {

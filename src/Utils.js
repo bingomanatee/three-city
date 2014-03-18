@@ -102,15 +102,15 @@ var Utils = {
             var x = tile.x - min_x;
             var z = tile.z - min_z;
 
-            if (!data[z]){
+            if (!data[z]) {
                 data[z] = [];
             }
 
             data[z][x] = tile.type;
         })
 
-        if (toString){
-            return _.reduce(data, function(out, items){
+        if (toString) {
+            return _.reduce(data,function (out, items) {
                 out.push(items.join(''));
                 return out;
             }, []).join("\n");
@@ -195,7 +195,7 @@ var Utils = {
 
                         if (_.contains(x_axis, x1) || _.contains(x_axis, x0) || _.contains(z_axis, z1) || _.contains(z_axis, z0)) {
 
-                            memo.push(_.extend({type: '.'}, iterator));
+                            memo.push(_.extend({type: '.', height: 2 + Math.round(18 * Math.random())}, iterator));
                         } else {
                             memo.push(_.extend({type: '*'}, iterator));
                         }
@@ -216,8 +216,54 @@ var Utils = {
         )
             ([]);
 
+    },
+
+    sum: function (a) {
+        return _.reduce(a, function (o, n) {
+            return o + n;
+        }, 0);
+    },
+
+    /**
+     * the proportion of one array element to the sum of the array
+     *
+     * @param a {array}
+     * @param i {int}
+     * @param s {number}
+     *
+     * @returns {number}
+     */
+    proportion: function (a, i, s) {
+        if (arguments.length < 2) {
+            s = 1;
+        }
+        return s * a[i] / _s(a);
+    },
+
+    /**
+     * the ratio of the sum of 0..i elements of a over the sum of a, scaled by s
+     * @param a {[number]}
+     * @param i {number}
+     * @param s {number} (optional) default 1
+     * @returns {number}
+     */
+    prop_sum: function (a, i, s) {
+        if (arguments.length < 2) {
+            s = 1;
+        }
+        if (i == 0 || a.length == 0) {
+            return 0;
+        }
+
+        var num = 0, denom = 0;
+        for (var index = 0; index < a.length; ++index) {
+            denom += a[index];
+            if (index <= i) {
+                num += a[index];
+            }
+        }
+
+        return s * num / denom;
     }
-
-
 };
 City.Utils = Utils;

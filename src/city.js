@@ -11,6 +11,7 @@ function City() {
     this.display_name = 'city';
 
     this.building_types = [];
+    this.img_route = '/img/';
 }
 
 City.GRID_SIZE = 50;
@@ -43,11 +44,11 @@ City.prototype = {
                 shadowCameraLeft: -D, shadowCameraRight: D, shadowCameraTop: -D, shadowCameraBottom: D, shadowBias: -0.001,
                 castShadow: true, shadowCameraVisible: true, shadowMapWidth: 1024 * 8, shadowMapHeight: 1024 * 8});
             sun.add(sun_light);
-            sun.at(City.GRID_SIZE * -4, City.GRID_SIZE * 16, City.GRID_SIZE * 6);
+            sun.at(City.GRID_SIZE * -4, City.GRID_SIZE * 8, City.GRID_SIZE * 6);
             this._display.add(sun);
 
-            var hemi = new O3.RenderObject(new THREE.HemisphereLight(O3.util.rgb(0.8, .75, 1), O3.util.rgb(0.5, 0.1, 0), 0.125), {name: 'hemi-sky'});
-            this._display.add(hemi);
+          //  var hemi = new O3.RenderObject(new THREE.HemisphereLight(O3.util.rgb(0.5, 0.1, 0), O3.util.rgb(0.8, .75, 1), 0.125), {name: 'hemi-sky'});
+        //    this._display.add(hemi);
 
             var camera = this._display.camera();
             var cam = this._display.add(new O3.RenderObject(null, {name: 'camera', update: function () {
@@ -90,7 +91,7 @@ City.prototype = {
         var loader = new THREE.JSONLoader();
 
         var self = this;
-        loader.load('/3d/tower2.js', function (obj, mats) {
+        loader.load('/3d/tower3.js', function (obj, mats) {
             //console.log('tower: ', obj, 'mats:', mats);
             var mesh = new THREE.Mesh(obj, new THREE.MeshFaceMaterial(mats));
             mesh.castShadow = true;
@@ -98,7 +99,7 @@ City.prototype = {
             mesh.scale.set(City.GRID_SIZE / 2, City.GRID_SIZE / 2, City.GRID_SIZE / 2);
              this.display().ro().set_obj(mesh);
             self._tower = mesh;
-        }.bind(this), '/img/');
+        }.bind(this), this.img_root);
 
     },
 
@@ -193,7 +194,10 @@ City.prototype = {
                         _.each(cubes, function (cube) {
                             root.remove(cube);
                             var ro = new O3.RenderObject().set_obj(self._tower.clone());
+
+                            cube.obj().position.y -= City.GRID_SIZE * 6 * (20 - cube.data.height)/20;
                             ro.at(cube.obj().position);
+
                             root.add(ro);
                             root.update = _.identity;
                             root.update_on_animate = false;

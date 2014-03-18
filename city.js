@@ -23,6 +23,7 @@ function City() {
     this.display_name = 'city';
 
     this.building_types = [];
+    this.img_route = '/img/';
 }
 
 City.GRID_SIZE = 50;
@@ -55,11 +56,11 @@ City.prototype = {
                 shadowCameraLeft: -D, shadowCameraRight: D, shadowCameraTop: -D, shadowCameraBottom: D, shadowBias: -0.001,
                 castShadow: true, shadowCameraVisible: true, shadowMapWidth: 1024 * 8, shadowMapHeight: 1024 * 8});
             sun.add(sun_light);
-            sun.at(City.GRID_SIZE * -4, City.GRID_SIZE * 16, City.GRID_SIZE * 6);
+            sun.at(City.GRID_SIZE * -4, City.GRID_SIZE * 8, City.GRID_SIZE * 6);
             this._display.add(sun);
 
-            var hemi = new O3.RenderObject(new THREE.HemisphereLight(O3.util.rgb(0.8, .75, 1), O3.util.rgb(0.5, 0.1, 0), 0.125), {name: 'hemi-sky'});
-            this._display.add(hemi);
+          //  var hemi = new O3.RenderObject(new THREE.HemisphereLight(O3.util.rgb(0.5, 0.1, 0), O3.util.rgb(0.8, .75, 1), 0.125), {name: 'hemi-sky'});
+        //    this._display.add(hemi);
 
             var camera = this._display.camera();
             var cam = this._display.add(new O3.RenderObject(null, {name: 'camera', update: function () {
@@ -102,7 +103,7 @@ City.prototype = {
         var loader = new THREE.JSONLoader();
 
         var self = this;
-        loader.load('/3d/tower2.js', function (obj, mats) {
+        loader.load('/3d/tower3.js', function (obj, mats) {
             //console.log('tower: ', obj, 'mats:', mats);
             var mesh = new THREE.Mesh(obj, new THREE.MeshFaceMaterial(mats));
             mesh.castShadow = true;
@@ -110,7 +111,7 @@ City.prototype = {
             mesh.scale.set(City.GRID_SIZE / 2, City.GRID_SIZE / 2, City.GRID_SIZE / 2);
              this.display().ro().set_obj(mesh);
             self._tower = mesh;
-        }.bind(this), '/img/');
+        }.bind(this), this.img_root);
 
     },
 
@@ -205,7 +206,10 @@ City.prototype = {
                         _.each(cubes, function (cube) {
                             root.remove(cube);
                             var ro = new O3.RenderObject().set_obj(self._tower.clone());
+
+                            cube.obj().position.y -= City.GRID_SIZE * 6 * (20 - cube.data.height)/20;
                             ro.at(cube.obj().position);
+
                             root.add(ro);
                             root.update = _.identity;
                             root.update_on_animate = false;
@@ -460,15 +464,15 @@ var Utils = {
             var x = tile.x - min_x;
             var z = tile.z - min_z;
 
-            if (!data[z]){
+            if (!data[z]) {
                 data[z] = [];
             }
 
             data[z][x] = tile.type;
         })
 
-        if (toString){
-            return _.reduce(data, function(out, items){
+        if (toString) {
+            return _.reduce(data,function (out, items) {
                 out.push(items.join(''));
                 return out;
             }, []).join("\n");
@@ -553,7 +557,7 @@ var Utils = {
 
                         if (_.contains(x_axis, x1) || _.contains(x_axis, x0) || _.contains(z_axis, z1) || _.contains(z_axis, z0)) {
 
-                            memo.push(_.extend({type: '.'}, iterator));
+                            memo.push(_.extend({type: '.', height: 2 + Math.round(18 * Math.random())}, iterator));
                         } else {
                             memo.push(_.extend({type: '*'}, iterator));
                         }
@@ -574,61 +578,69 @@ var Utils = {
         )
             ([]);
 
+    },
+
+    sum: function (a) {
+        return _.reduce(a, function (o, n) {
+            return o + n;
+        }, 0);
+    },
+
+    /**
+     * the proportion of one array element to the sum of the array
+     *
+     * @param a {array}
+     * @param i {int}
+     * @param s {number}
+     *
+     * @returns {number}
+     */
+    proportion: function (a, i, s) {
+        if (arguments.length < 2) {
+            s = 1;
+        }
+        return s * a[i] / _s(a);
+    },
+
+    /**
+     * the ratio of the sum of 0..i elements of a over the sum of a, scaled by s
+     * @param a {[number]}
+     * @param i {number}
+     * @param s {number} (optional) default 1
+     * @returns {number}
+     */
+    prop_sum: function (a, i, s) {
+        if (arguments.length < 2) {
+            s = 1;
+        }
+        if (i == 0 || a.length == 0) {
+            return 0;
+        }
+
+        var num = 0, denom = 0;
+        for (var index = 0; index < a.length; ++index) {
+            denom += a[index];
+            if (index <= i) {
+                num += a[index];
+            }
+        }
+
+        return s * num / denom;
     }
-
-
 };
 City.Utils = Utils;
 function Wall(params) {
-    this.id = ++Wall.id;
-
-    this.color = new THREE.Color(0.8, 0.8, 0.8);
-    this.repeat = Wall.REPEAT;
     this.size = Wall.SIZE;
-    this.stories = 40;
-    this.wall_z = -10;
-
-    this.sun_color = new THREE.Color(.6, .6, .55);
-    this.dusk_color = new THREE.Color(.3, 0.2, .15, 25);
-
-    this.window_sizes = {
-        v: [1, 5, 1], // the window heights relative to a story.
-        h: [4, 1, 4, 8, 4, 1, 4, 8, 4] // the width divisions of the window bank
-    };
-
-    this.margin = {
-        h: [1, 20, 1], // relative to the entire banks of windows, the left and right margins.
-        v: [3, 50, 1]    // relative to a single story: top height margin, story height, bottom margin (typically 0).
-    };
-
-    this.window_frame = {
-        h: [1, 8, 1],
-        v: [10, 12, 4],
-        color: new THREE.Color(0.4, 0, 0.2)
-    };
-
-    this.window_color = {
-        lit_percent: 0.25,
-        unlit_color: new THREE.Color(0, 0, 0),
-        lit_color: new THREE.Color(1, 1, 0.9)
-    };
-
-    var tokens = _.pluck(params, Wall.OBJ_PARAMS);
-    _.each(Wall.OBJ_PARAMS, function (key) {
-        delete params[key]
-    });
-
+    this.repeat = 1;
     _.extend(this, params);
-    _.each(tokens, function (value, name) {
-        if (value && _.isObject(value)) {
-            _.extend(this[name], value);
-        }
-    }, this);
-
-    this.init();
-
-    this.display().mat('window lit', {type: 'MeshBasicMaterial', color: this.window_color.lit_color});
-    this.display().mat('window unlit', {type: 'MeshBasicMaterial', color: this.window_color.unlit_color});
+    this.id = ++Wall.id;
+    this.width = this.size;
+    this.height = this.size * this.repeat;
+    this.renderer();
+    this.display().mat('wall', { type: 'phong'}).set('color', O3.util.rgb(0.8, 0.75, 0.5));
+    this.display().mat('window', {type: 'phong'}).set('color', O3.util.rgb(1, 1, 1));
+    this.init_wall();
+    this.init_light();
 }
 
 Wall.id = 0;
@@ -636,351 +648,104 @@ Wall.SIZE = 512;
 Wall.REPEAT = 5;
 Wall.OBJ_PARAMS = ['window_frame', 'wiondow_color', 'window_sizes'];
 
-function _s(a) {
-    return _.reduce(a, function (o, n) {
-        return o + n;
-    }, 0);
-}
-
-/**
- * the proportion of one array element to the sum of the array
- *
- * @param a {array}
- * @param i {int}
- * @param s {number}
- *
- * @returns {number}
- * @private
- */
-function _p(a, i, s) {
-    if (arguments.length < 2) {
-        s = 1;
-    }
-    return s * a[i] / _s(a);
-}
-
-function _ps(a, i, s) {
-    if (arguments.length < 2) {
-        s = 1;
-    }
-    if (i == 0) {
-        return 0;
-    }
-
-    return s * _s(a.slice(0, i)) / _s(a);
-}
-
 Wall.prototype = {
-
-    windows: function () {
-        return Math.floor(this.window_sizes.v.length / 2);
-    },
 
     display: function () {
         if (!this._display) {
-            this._display = O3.display('wall_' + this.id, {width: this.size, height: this.size * this.repeat});
+            this._display = O3.display('wall');
+            this._display.size(this.width, this.height);
         }
-
         return this._display;
     },
 
-    init: function () {
-        this.init_camera();
-
-        this.init_lights();
-
-        this.init_wall();
-
-        this.display().add(new O3.RenderObject(new THREE.AxisHelper(this.size / 4)));
-        var cube = new THREE.Mesh(new THREE.CubeGeometry(this.size / 8, this.size / 8, this.size / 8), new THREE.MeshLambertMaterial({color: O3.util.rgb(0.8, 0.8, 0.8)}));
-        cube.castShadow = true;
-
-        this.init_renderer();
-
-        this.init_windows();
-        // this.init_PP();
-    },
-
-    init_renderer: function () {
-
-        var params = {
-            shadowMapEnabled: true,
-            shadowMapType: THREE.PCFSoftShadowMap
-        };
-
-        if(this.canvas){
-            this.canvas.width = this.width();
-            this.canvas.height = this.hieght();
-            params.canvas = this.canvas;
+    camera: function () {
+        if (!this._camera) {
+            this._camera = new THREE.PerspectiveCamera(90, this.width / this.height, 1, this.size * 4);
+            this.display().ro()
+                .at(this.size / 4, 0, this.size)
+                .rotY(Math.PI / 8)
+                .obj().add(this._camera);
         }
 
-        this.display().renderer(new THREE.WebGLRenderer(params).setSize(this.width(), this.height()));
+        return this._camera;
     },
 
-    init_PP: function () {
-        return;
+    renderer: function () {
+        if (!this._renderer) {
+            var ren = new THREE.WebGLDeferredRenderer(_.pick(this, 'width', 'height'));
 
-        var camera = this.display().camera();
-        var renderer = this.display().renderer();
-        // depth
-
-        var depthShader = THREE.ShaderLib[ "depthRGBA" ];
-        var depthUniforms = THREE.UniformsUtils.clone(depthShader.uniforms);
-
-        var depthMaterial = new THREE.ShaderMaterial({ fragmentShader: depthShader.fragmentShader, vertexShader: depthShader.vertexShader, uniforms: depthUniforms });
-        depthMaterial.blending = THREE.NoBlending;
-
-        // postprocessing
-
-        var composer = new THREE.EffectComposer(renderer);
-        composer.addPass(new THREE.RenderPass(this.display().scene(), camera));
-
-        var depthTarget = new THREE.WebGLRenderTarget(this.size, this.height(), { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat });
-
-        var effect = new THREE.ShaderPass(THREE.SSAOShader);
-        effect.uniforms[ 'tDepth' ].value = depthTarget;
-        effect.uniforms[ 'size' ].value.set(this.width() / 2, this.height() / 2);
-        effect.uniforms[ 'cameraNear' ].value = -200;
-        effect.uniforms[ 'cameraFar' ].value = 200;
-        // effect.uniforms[ 'aoClamp' ].value = 0.5;
-        effect.uniforms[ "lumInfluence"].value = 0.9;
-        effect.material.defines = { "RGBA_DEPTH": true, "ONLY_AO_COLOR": "1.0, 0.7, 0.5" };
-        effect.uniforms.onlyAO.value = 0;
-        effect.renderToScreen = true;
-        composer.addPass(effect);
-        var effectFXAA = new THREE.ShaderPass(THREE.FXAAShader);
-        //    effectFXAA.uniforms[ 'resolution' ].value.set( 2 / ( this.width() ), 2 / ( this.height() ) );
-
-        composer.addPass(effectFXAA);
-
-        var depthPassPlugin = new THREE.DepthPassPlugin();
-        depthPassPlugin.renderTarget = depthTarget;
-
-        renderer.addPrePlugin(depthPassPlugin);
-
-        this.composer = composer;
-    },
-
-    init_windows: function () {
-        this.STORY_HEIGHT = this.height() / this.stories;
-
-        this.ul_anchor = this.display().ro().at(this.size / -2, this.height() / 2, this.wall_z);
-
-        var self = this;
-
-        var windows = function (iter) {
-            var anchor = self.display().ro().at(-iter.width / 2, iter.height / 2, 0);
-            iter.ro.add(anchor);
-            var params = {
-                v: self.window_sizes.v,
-                h: self.window_sizes.h,
-                width: iter.width,
-                height: iter.height,
-                anchor: anchor,
-                level: 1,
-                depth: 20,
-                visible: true,
-                next: function (window_iter) {
-                    if ((window_iter.row == 1) && !(window_iter.col % 2)) {
-                        self._draw_box(window_iter);
-                        window_iter.ro.set('castShadow', true);
-                        window_iter.ro.set('receiveShadow', false);
-                    }
-                },
-
-                make_color: function () {
-                    return new THREE.Color(1, 1, 0.8)
-                }
-
-            };
-
-            self.grid_loop(params);
-        };
-
-        var next = function (box_iter) {
-
-            console.log('inner bi: ', box_iter);
-            if (box_iter.col == 1 && box_iter.row == 1) {
-
-                var anchor = new O3.RenderObject().at(-box_iter.width / 2, box_iter.height / 2, 0);
-                box_iter.ro.add(anchor);
-
-                var params = {
-                    width: box_iter.width,
-                    height: box_iter.height,
-                    v: _.map(_.range(0, self.stories), function () {
-                        return 1
-                    }),
-                    h: [1],
-                    anchor: anchor,
-                    level: 1,
-                    visible: false,
-                    make_color: function (iter_params) {
-                        var ch = (iter_params.row + iter_params.col) % 2;
-                        return new THREE.Color(ch, ch, ch);
-                    },
-                    next: Fools.pipe().add(self._draw_box.bind(self)).add(windows)
-                };
-                self.grid_loop(params);
-            }
-        };
-
-        var next_pipe = Fools.pipe().add(this._draw_box.bind(this)).add(next);
-
-        this.grid_loop({
-            anchor: this.ul_anchor,
-            h: this.margin.h,
-            v: this.margin.v,
-            width: this.width(),
-            height: this.height(),
-            level: 1,
-            visible: false,
-            make_color: function (iter_params) {
-                if (!window.CN) {
-                    window.CN = 1;
-                } else {
-                    window.CN -= 0.05;
-                }
-                var c;
-                if ((iter_params.col + iter_params.row) % 2) {
-                    c = new THREE.Color(window.CN, 0, window.CN);
-                } else {
-                    c = new THREE.Color(0, window.CN, 0);
-                }
-                console.log('color: ', c.getStyle());
-                return c;
-            },
-            next: next_pipe
-        })
-    },
-
-    width: function () {
-        return this.size;
-    },
-
-    _lerp3: function (a, b, ratio) {
-
-        return [
-            a[0] * (1 - ratio) + b[0] * ratio,
-            a[1] * (1 - ratio) + b[1] * ratio,
-            a[2] * (1 - ratio) + b[2] * ratio
-        ];
-    },
-
-    grid_loop: function (params) {
-
-        var handler = function (iter) {
-            // if (iter.col != 1) return;
-            var left = _ps(params.h, iter.col, params.width);
-            var right = _ps(params.h, iter.col + 1, params.width);
-            var width = right - left;
-
-            var top = _ps(params.v, iter.row, params.height) - params.height;
-            var bottom = _ps(params.v, iter.row + 1, params.height) - params.height;
-            var height = bottom - top;
-
-            return _.defaults({
-                left: left,
-                right: right,
-                top: top,
-                bottom: bottom,
-                height: height,
-                width: width
-            }, params, iter);
-        }.bind(this);
-
-        if (params.next) {
-            handler = Fools.pipe().add(handler).add(params.next);
-
+            ren.setSize(this.width, this.height);
+            ren.shadowMapEnabled = true;
+            this._renderer = this.display().renderer(ren);
         }
 
-        Fools.loop(handler).dim('col').min(0).max(params.h.length).dim('row').min(0).max(params.v.length)();
-
-    },
-
-    _draw_box: function (box_iter) {
-
-        var x = box_iter.left + box_iter.width / 2;
-        var y = box_iter.top + box_iter.height / 2;
-        console.log('col: ', box_iter.col, 'row: ', box_iter.row,
-            'x:', Math.round(x), 'y:', Math.round(y),
-            'w:', Math.round(box_iter.width), 'h:', Math.round(box_iter.height),
-            'l/r:', Math.round(box_iter.left), Math.round(box_iter.right),
-            't/b:', Math.round(box_iter.top), Math.round(box_iter.bottom));
-
-        var panel;
-
-        if (box_iter.hasOwnProperty('visible') && (!box_iter.visible)) {
-            panel = new THREE.CubeGeometry(0.0001, 0.0001, 0.0001);
-        } else {
-            panel = new THREE.CubeGeometry(box_iter.width, box_iter.height, box_iter.depth || 5);
-        }
-        var mat = new THREE.MeshBasicMaterial({color: box_iter.make_color(box_iter)});
-        console.log('mat: ', mat);
-        var ro = this.display().ro().geo(panel)
-            .at(x, y, 0)
-            .mat(mat);
-
-        if (box_iter.anchor) {
-            box_iter.anchor.add(ro);
-        }
-        box_iter.ro = ro;
-        return box_iter;
-    },
-
-    height: function () {
-        return this.size * this.repeat;
-    },
-
-    init_camera: function () {
-        var camera =
-            this.display().camera(new THREE.OrthographicCamera(-this.size / 2, this.size / 2, this.height() / 2, this.height() / -2));
-
-        this.display().add(new O3.RenderObject(camera).at(0, 0, 500));
-    },
-
-    init_lights: function () {
-
-        this.display().add(new O3.RenderObject(new THREE.HemisphereLight(this.sun_color, this.dusk_color, 1.25)).at(0, 0, 1));
-        var D = this.size * this.repeat / 1.5;
-
-        var X_NUM = 2;
-        var Y_NUM = 1;
-
-        var X_RANGE = 1 + X_NUM * 2;
-        var Y_RANGE = 1 + Y_NUM * 2;
-        var SUN_CONFIG = {
-
-            shadowMapFar: this.size * 4,
-            shadowCameraLeft: -D, shadowCameraRight: D,
-            shadowCameraTop: -D, shadowCameraBottom: D,
-            shadowMapWidth: 1 * 1024, shadowMapHeight: 1 * 1024,
-            shadowBias: -0.0002,
-            castShadow: 1, shadowCameraVisible: 0,
-            shadowDarkness: 0.06
-        };
-
-        Fools.loop(function (iter) {
-            // if (iter.x || iter.y){
-            var light = this.display().light('sun')
-                .at(iter.x * this.width() / (8 * X_RANGE), iter.y * this.width() / (8 * Y_RANGE), this.size);
-            light.obj().color.set(1, 1, 1);
-            light.set(SUN_CONFIG);
-            //  }
-        }.bind(this)).dim('x').min(-X_NUM).max(X_NUM).dim('y').min(-Y_NUM + 1).max(Y_NUM + 1)();
+        return this._renderer;
     },
 
     init_wall: function () {
-        var w = new THREE.PlaneGeometry(this.width() * 1.05, this.height() * 1.02);
-        this.display().mat('wall_color', {color: this.color, type: 'MeshPhongMaterial'});
-        var wall_ro = this.display().ro().geo(w).mat('wall_color').n('wall');
-        var wall_base = new O3.RenderObject(null, {name: 'wall_base'}).at(0, 0, this.wall_z);
-        wall_ro.set('receiveShadow', true);
-        wall_base.add(wall_ro);
-        this.display().add(wall_base);
-        var ro = this.display().ro().geo(new THREE.CylinderGeometry(this.size / 20, this.size / 20, this.height(), 120)).mat('wall_color').at(-this.size / 8, 0, 0);
-        ro.set('receiveShadow', true);
-        ro.set('castShadow', true);
+        this.display().ro(new THREE.CubeGeometry(this.width, this.height, 10))
+            .mat('wall')
+            .set({castShadow: true, receiveShadow: true});
+
+        this.display().ro(new THREE.CubeGeometry(this.width / 10, this.width / 10, 30))
+            .mat('window')
+            .set({castShadow: true, receiveShadow: true});
+    },
+
+    init_light: function () {
+        var lights = [];
+        Fools.loop(function (iter) {
+            if (!( (Math.abs(iter.x) != Math.abs(iter.y)))) {
+                return;
+            }
+            var x_offset = iter.x * this.size / 4;
+            var y_offset = (iter.y + 1) * this.size / 4;
+
+            lights.push(this.display().light('sun')
+                .at(x_offset, y_offset, this.size)
+                .set({castShadow: true, shadowDarkness: 0.25}));
+
+        }.bind(this)).dim('x', -3, 3).dim('y', -3, 3)();
+
+        console.log('lights: ', lights);
+
+        _.each(lights, function (ro) {
+            var light = ro.obj();
+            light.intensity = 1 / lights.length;
+        })
+    },
+
+    enable_shadows: function (children) {
+        return;
+        if (!children) {
+
+            var scene = this.display().scene();
+            children = scene.children;
+        }
+
+        _.each(children, function (child) {
+            var obj = child.hasOwnProperty('obj') && _.isFunciton(child.obj) ? child.obj() : child;
+
+            if (obj) {
+
+                if (!obj.castShadow || (!obj.receiveShadow)) {
+                    obj.castShadow = true;
+                    obj.receiveShadow = true;
+                }
+                if (obj.children && obj.children.length) {
+                    this.enable_shadows(obj.children);
+                }
+                if ((!(child === obj)) && child.children && child.children.length) {
+                    this.enable_shadows(child.children);
+                }
+            }
+        }, this);
+    },
+
+    render: function () {
+
+        this.enable_shadows();
+        this.display().render(this.camera());
     }
 
 };
